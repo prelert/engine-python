@@ -78,11 +78,14 @@ def main():
         return
     
     
-    print "Date,AnomalyScore"
+    print "Date,BucketId,AnomalyScore"
     for bucket in response:
-        print "{0},{1}".format(bucket['timestamp'], bucket['anomalyScore'])
+        print "{0},{1},{2}".format(bucket['timestamp'], bucket['id'], bucket['anomalyScore'])
     
-    next_bucket_id = int(response[-1]['id']) + 1
+    if len(response) > 0:
+        next_bucket_id = int(response[-1]['id']) + 1
+    else:
+        next_bucket_id = None
 
     # Wait POLL_INTERVAL_SECS then query for any new buckets
     while True:
@@ -95,9 +98,10 @@ def main():
             break
 
         for bucket in response:
-            print "{0},{1}".format(bucket['timestamp'], bucket['anomalyScore'])
+            print "{0},{1},{2}".format(bucket['timestamp'], bucket['id'], bucket['anomalyScore'])
         
-        next_bucket_id = int(bucket['id']) + 1 
+        if len(response) > 0:
+            next_bucket_id = int(response[-1]['id']) + 1
 
 
 if __name__ == "__main__":

@@ -130,7 +130,7 @@ def generateRecords(csv_filename, start_date, interval, end_date):
 def main():
     args = parseArguments()
 
-    start_date = datetime(2011, 05, 19, 0, 0, 0)    
+    start_date = datetime(2011, 05, 15, 0, 0, 0)    
     # interval between the generated timestamps for the records
     interval = timedelta(seconds=300)
 
@@ -144,7 +144,7 @@ def main():
 
 
     job_config = '{"analysisConfig" : {\
-            "bucketSpan":600,\
+            "bucketSpan":3600,\
             "detectors" :[\
                 {"fieldName":"In Discards","byFieldName":"host"},\
                 {"fieldName":"In Octets","byFieldName":"host"},\
@@ -172,7 +172,6 @@ def main():
     # get the csv header (the first record generated)
     record_generator = generateRecords(args.file, start_date, interval, end_date)    
     header = ','.join(next(record_generator))
-    print header
     header += '\n'
 
 
