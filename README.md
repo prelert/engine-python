@@ -14,16 +14,17 @@ dependencies are required.
 
 Using the Client
 -----------------
-The easiest way is to walk you through this annotated tutorial.
-See the file [tutorial/engineApiTutorial.py] and example data [data/flightcentre.csv](data/flightcentre.csv)
+The easiest way is to walk you through this annotated example.
+See the file [simpleEngineApiExample.py](simpleEngineApiExample.py) and example data [data/flightcentre.csv](data/flightcentre.csv). To run the full example invoke:
 
-Create the client and make a HTTP connection to the API server
-Fire up your Python interpreter and paste
+    python simpleEngineApiExample.py data/flightcentre.csv
+
+Your first act is to create the client and make a HTTP connection to the API server
 
     from prelert.engineApiClient import EngineApiClient
     engine_client = EngineApiClient(host='localhost', base_url='/engine/v0.3', port=8080)
 
-The job configuration is a JSON document
+Before you can create a job the configuration must be defined.
 
     job_config =  '{ \
                     "analysisConfig" : {\
@@ -43,7 +44,7 @@ Every client call returns a tuple *(http_status_code, response)* use the *http_s
 to determine the sucess of the operation, if the code is not one of the 2XX Success codes
 response will be an object containing an error message.
 
-As an example try creating a new job with an invalid configuration that does not define 
+As an example try creating a new job with an invalid configuration, for example this one does not define 
 any detectors.
 
     bad_job_config = '{\
@@ -62,14 +63,14 @@ any detectors.
 and an informative error message reminds us to configure some detectors next time.
 For more information on the possible error codes see the Engine API documentation.
 
-Once we have a properly configured job we can upload data to it first let's revisit 
+Once we have a properly configured job we can upload data to it first let's revisit part of
 the configuration.
     
-    "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat"="yyyy-MM-dd HH:mm:ssX"}
+    "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat"="yyyy-MM-dd\'T\' HH:mm:ssX"}
 
 This line specifies that our data is in a delimited format (the default), the fields are
 separated by ',' and there is a field 'time' containing a timestamp in the Java SimpleDateFormat 
-'yyyy-MM-dd'T'HH:mm:ssX'.
+'yyyy-MM-dd'T'HH:mm:ssX' equivalent to ISO 8601.
 
 Here's an example of the data:
 > airline,responsetime,sourcetype,time  
@@ -83,8 +84,8 @@ Create a job with our previously defined configuration
     engine_client = EngineApiClient(host='localhost', base_url='/engine/v0.3', port=8080)  
     (http_status_code, response) = engine_client.createJob(job_config)  
 
-    if http_status_code != 201:
-        print (http_status_code, json.dumps(response))
+    if http_status_code == 201:
+        job_id = response['id']
 
 
 The *job_id* will be used in all future method calls
@@ -96,7 +97,7 @@ Open the csv file and upload it to the Engine
     if http_status_code != 202:
         print (http_status_code, json.dumps(response)) # !error
 
-The *upload* function accepts an open file object or a string.
+The *upload* function accepts either an open file object or a string.
 
 Close the job to indicate that there is no more data to upload
 
@@ -104,16 +105,16 @@ Close the job to indicate that there is no more data to upload
     if http_status_code != 202:
         print (http_status_code, json.dumps(response)) # !error
 
-Now get all of the result buckets using one of the clients _bucket_ functions and 
+Now get all of the result buckets using one of the clients _getBuckets_ functions and 
 print the anomaly scores
 
     (http_status_code, response) = engine_client.getAllBuckets(job_id)
     if http_status_code != 200:
         print (http_status_code, json.dumps(response))
     else:
-        print "Date,BucketId,AnomalyScore"
+        print "Date,AnomalyScore"
         for bucket in response:                                
-            print "{0},{1},{2}".format(bucket['timestamp'], bucket['anomalyScore']) 
+            print "{0},{1}".format(bucket['timestamp'], bucket['anomalyScore']) 
 
 You can also request buckets by time
 
