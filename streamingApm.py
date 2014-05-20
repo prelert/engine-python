@@ -17,10 +17,23 @@
 #                                                                          #
 ############################################################################
 '''
-    
+This script creates a new job and uploads to it APM data records 
+generated from existing data in a CSV file. New records will created 
+indefinitely or until the 'duration' argument expires. Each record has
+a new timestamp so this script can be used to repeatedly replay the 
+historical data. After each upload of data the script requests any new
+bucket results and prints them.
 
-    Use Ctrl-C to stop this script - the interrupt is caught and 
-    the job closed gracefully
+The script is invoked with 1 positional argument -the CSV file containing 
+APM to use a the source of the generated data- and optional arguments
+to specify the location of the Engine API. Run the script with '--help'
+to see the options.
+
+The file used in the online example can be downloaded from 
+http://s3.amazonaws.com/prelert_demo/network.csv
+
+If no 'duration' is set the script will run indefinitely cse Ctrl-C to
+stop the script - the interrupt is caught and the job closed gracefully
 '''
 
 import argparse
@@ -29,8 +42,7 @@ import json
 import logging
 import sys
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta, tzinfo
 
 from engineApiClient import EngineApiClient
 
@@ -39,6 +51,21 @@ HOST = 'localhost'
 PORT = 8080
 BASE_URL = 'engine/v0.3'
 
+ZERO_OFFSET = timedelta(0)
+
+class UtcOffset(tzinfo):
+    '''
+    Timezone object at 0 (UTC) offset
+    '''
+
+    def utcoffset(self, dt):
+        return ZERO_OFFSET
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO_OFFSET
 
 
 def parseArguments():
@@ -49,7 +76,7 @@ def parseArguments():
         + str(PORT), default=PORT)
     parser.add_argument("--duration", help="The number of hours to generate \
         data for. If not set script will produce records from the historical \
-        start date until the time now", default=0)
+        start date until the time now", type=int, default=0)
     parser.add_argument("file", help="Path to APM data")
 
     return parser.parse_args()   
@@ -130,13 +157,14 @@ def generateRecords(csv_filename, start_date, interval, end_date):
 def main():
     args = parseArguments()
 
-    start_date = datetime(2011, 05, 15, 0, 0, 0)    
+
+    start_date = datetime(2011, 05, 15, 0, 0, 0, 0, UtcOffset())    
     # interval between the generated timestamps for the records
     interval = timedelta(seconds=300)
 
 
     if args.duration <= 0:
-        end_date = datetime.now()
+        end_date = datetime.now(UtcOffset())
     else:
         duration = timedelta(hours=args.duration)
         end_date = start_date + duration
@@ -155,7 +183,7 @@ def main():
         "dataDescription" : {\
             "fieldDelimiter":",",\
             "timeField":"time",\
-            "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ss"\
+            "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"\
         }\
     }'
     
@@ -174,10 +202,14 @@ def main():
     header = ','.join(next(record_generator))
     header += '\n'
 
-
     count = 0
     data = header
     try:
+        # for the results
+        next_bucket_id = 1
+        print
+        print "Date,BucketId,AnomalyScore"
+
         for record in record_generator:
             # format as csv and append new line
             csv = ','.join(record) + '\n'
@@ -191,19 +223,40 @@ def main():
                     print (http_status_code, json.dumps(response))
                     break                    
 
-                # commit the uploaded data
-                engine_client.close(job_id)
+                # commit the uploaded data, when this returns the data
+                # has been analyzed and the results are available.
+                (http_status_code, response) = engine_client.close(job_id)
+                if http_status_code != 202:                    
+                    print (http_status_code, json.dumps(response))
+                    break  
+
+                # get the latest results...
+                (http_status_code, response) = engine_client.getBucketsByDate(job_id=job_id, 
+                    start_date=str(next_bucket_id), end_date=None)
+                if http_status_code != 200:
+                    print (http_status_code, json.dumps(response))
+                    break
+
+                # and print them
+                for bucket in response:
+                    print "{0},{1},{2}".format(bucket['timestamp'], bucket['id'], bucket['anomalyScore'])
+
+                if len(response) > 0:
+                    next_bucket_id = int(response[-1]['id']) + 1
 
                 # must send the header every time    
                 data = header
                 count = 0
 
-            time.sleep(0.1)
+            # sleep a little while (optional this can be removed)
+            #time.sleep(0.1)
 
     except KeyboardInterrupt:
         print "Keyboard interrupt closing job..."
                 
-    engine_client.close(job_id)
+    (http_status_code, response) = engine_client.close(job_id)
+    if http_status_code != 202:                    
+        print (http_status_code, json.dumps(response))
 
 
 if __name__ == "__main__":

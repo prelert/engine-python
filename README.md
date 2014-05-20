@@ -15,9 +15,10 @@ dependencies are required.
 Using the Client
 -----------------
 The easiest way is to walk you through this annotated example.
-See the file [simpleEngineApiExample.py](simpleEngineApiExample.py) and example data [data/flightcentre.csv](data/flightcentre.csv). To run the full example invoke:
+See the file [simpleEngineApiExample.py](simpleEngineApiExample.py) and download the example data
+from  [http://s3.amazonaws.com/prelert_demo/farequote.csv](http://s3.amazonaws.com/prelert_demo/farequote.csv). To run the full example invoke:
 
-    python simpleEngineApiExample.py data/flightcentre.csv
+    python simpleEngineApiExample.py farequote.csv
 
 Your first act is to create the client and make a HTTP connection to the API server
 
@@ -30,7 +31,7 @@ Before you can create a job the configuration must be defined.
                     "analysisConfig" : {\
                     "bucketSpan":3600,\
                     "detectors" :[{"fieldName":"responsetime","byFieldName":"airline"}] },\
-                    "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd\'T\' HH:mm:ssX"}\
+                    "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd HH:mm:ssX"}\
                    }'
     (http_status_code, response) = engine_client.createJob(job_config)
 
@@ -44,12 +45,12 @@ Every client call returns a tuple *(http_status_code, response)* use the *http_s
 to determine the sucess of the operation, if the code is not one of the 2XX Success codes
 response will be an object containing an error message.
 
-As an example try creating a new job with an invalid configuration, for example this one does not define 
+As an example try creating a new job with an invalid configuration - this one does not define 
 any detectors.
 
     bad_job_config = '{\
                       "analysisConfig" : {"bucketSpan":3600 },\
-                      "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"}\
+                      "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd HH:mm:ssX"}\
                       }'
 
     engine_client = EngineApiClient(host='localhost', base_url='/engine/v0.3', port=8080)
@@ -66,18 +67,18 @@ For more information on the possible error codes see the Engine API documentatio
 Once we have a properly configured job we can upload data to it first let's revisit part of
 the configuration.
     
-    "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat"="yyyy-MM-dd\'T\' HH:mm:ssX"}
+    "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat"="yyyy-MM-dd HH:mm:ssX"}
 
 This line specifies that our data is in a delimited format (the default), the fields are
 separated by ',' and there is a field 'time' containing a timestamp in the Java SimpleDateFormat 
-'yyyy-MM-dd'T'HH:mm:ssX' equivalent to ISO 8601.
+'yyyy-MM-dd HH:mm:ssX'.
 
 Here's an example of the data:
-> airline,responsetime,sourcetype,time  
-> DJA,622,flightcentre,2012-10-21T13:00:00+0000  
-> JQA,1742,flightcentre,2012-10-21T13:00:01+0000  
-> GAL,5339,flightcentre,2012-10-21T13:00:02+0000  
-> GAL,3893,flightcentre,2012-10-21T13:00:03+0000  
+> time,airline,responsetime,sourcetype
+> 2013-01-28 00:00:00Z,AAL,132.2046,farequote  
+> 2013-01-28 00:00:00Z,JZA,990.4628,farequote  
+> 2013-01-28 00:00:00Z,JBU,877.5927,farequote  
+> 2013-01-28 00:00:00Z,KLM,1355.4812,farequote  
 
 Create a job with our previously defined configuration   
 
@@ -92,7 +93,7 @@ The *job_id* will be used in all future method calls
 
 Open the csv file and upload it to the Engine
 
-    csv_data_file = open('data/flightcentre.csv', 'rb')
+    csv_data_file = open('data/farequote.csv', 'rb')
     (http_status_code, response) = engine_client.upload(job_id, csv_data_file)
     if http_status_code != 202:
         print (http_status_code, json.dumps(response)) # !error

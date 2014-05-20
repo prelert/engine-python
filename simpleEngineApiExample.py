@@ -17,17 +17,24 @@
 #                                                                          #
 ############################################################################
 '''
-    Creates a new job and uploads flightcentre.csv to it. The job is
-    then closed and the result buckets queried
+Creates a new job and uploads farequote.csv to it. The job is
+then closed and the result buckets queried,
 
-    The output is csv format of date, bucket id and anomaly score
-        airline,responsetime,time
-        DJA,622,2012-10-21T13:00:00+0000
-        JQA,1742,2012-10-21T13:00:01+0000
-        GAL,5339,2012-10-21T13:00:02+0000
+The example file used can be downloaded from 
+http://s3.amazonaws.com/prelert_demo/farequote.csv and looks like this:
 
-    If a bucket id is specified only the anomaly records for that bucket
-    are returned.
+    time,airline,responsetime,sourcetype
+    2013-01-28 00:00:00Z,AAL,132.2046,farequote
+    2013-01-28 00:00:00Z,JZA,990.4628,farequote
+    2013-01-28 00:00:00Z,JBU,877.5927,farequote
+
+The script is invoked with 1 positional argument the farequote.csv 
+file and has optional arguments to specify the location of the 
+Engine API. Run the script with '--help' to see the options.
+
+The output is CSV print out of date, bucket id and anomaly score.
+If a bucket id is specified only the anomaly records for that bucket
+are returned.
 '''
 
 import argparse
@@ -57,7 +64,7 @@ def parseArguments():
         + HOST, default=HOST)    
     parser.add_argument("--port", help="The Prelert Engine API port, defaults to " 
         + str(PORT), default=PORT)
-    parser.add_argument("file", help="Path to flightcentre.csv")
+    parser.add_argument("file", help="Path to farequote.csv")
 
     return parser.parse_args()   
 
@@ -74,7 +81,7 @@ def main():
     job_config = '{"analysisConfig" : {\
                         "bucketSpan":3600,\
                         "detectors" :[{"fieldName":"responsetime","byFieldName":"airline"}] },\
-                        "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"} }'
+                        "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd HH:mm:ssX"} }'
 
     logging.info("Creating job")
     (http_status_code, response) = engine_client.createJob(job_config)

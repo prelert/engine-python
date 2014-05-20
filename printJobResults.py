@@ -17,11 +17,16 @@
 #                                                                          #
 ############################################################################
 '''
-    Pull the latest results for the provided job id then loop 
-    indefinitley polling 1 per second for any new results.
-    Prints the bucket timestamp and anomaly score.
+Pull the latest results for the provided job id then loop 
+indefinitley polling 1 per second for any new results.
+Prints the bucket timestamp, bucket id and anomaly score.
 
-    Use Ctrl-C to stop this script
+The script is invoked with 1 positional argument -the id of the 
+job to query the results of. Additional optional arguments
+to specify the location of the Engine API. Run the script with 
+'--help' to see the options.
+
+Use Ctrl-C to stop this script
 '''
 
 import argparse
