@@ -65,12 +65,19 @@ class EngineApiClient:
         return (response.status, job)   
 
 
-    def getJobs(self):
+    def getJobs(self, skip=0, take=100):
         '''
-        Get all the jobs in the system.
+        Get the first page of jobs in the system. 
+        Defaults to the first 100 jobs use the skip and take parameters
+        to get further pages. 
+        skip the first N jobs
+        take a maxium of this number of jobs
         Returns a (http_status_code, response) tuple, if http_status_code != 200
         response is an error message
         '''
+
+        url = self.base_url + "/jobs?skip={0}&take={1}".format(skip, take)
+
         self.connection.request("GET", self.base_url + "/jobs")
         response = self.connection.getresponse();
 
@@ -116,8 +123,6 @@ class EngineApiClient:
         Returns a (http_status_code, response_data) tuple, if 
         http_status_code != 202 response_data is an error message.
         """
-        logging.info('Uploading file to job ' + job_id + '...')
-
         headers = {}
         if gzipped:
             headers['Content-Encoding'] = 'gzip'
@@ -144,7 +149,8 @@ class EngineApiClient:
         """
         A Generator co-routine for uploading data in an *almost* asynchronous 
         manner using chunked transfer encoding. This function uses the yield 
-        statment chunk encode the data and write it into an open stream.
+        statment to receive a data record then chunk encodes the record and
+        writes it into the open upload stream.
 
         First the generator must be initialised by calling send(None) 
         this runs the code up to the first yield statement
@@ -164,8 +170,6 @@ class EngineApiClient:
             (http_status, response) = consumer.send('')
 
         """
-
-        logging.info('Uploading file to job ' + job_id + '...')
 
         url = self.base_url + "/data/" + job_id
 
