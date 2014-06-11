@@ -1,0 +1,19 @@
+{
+    "type" : "apache-access-gallery",
+    "job_config" : {
+        "analysisConfig" : { 
+            "bucketSpan":3600,
+            "detectors":[{"function":"count","byFieldName":"response"}] 
+        },
+        "dataDescription" : {
+            "format":"json",
+            "timeField":"@timestamp", 
+            "timeFormat":"yyyy-MM-dd'T'HH:mm:ss.SSSX"
+        }
+    },
+    "search" : {
+        "filter" : { "match_all" : {}},
+        "sort":[{"@timestamp" : {"order":"asc"}}],
+        "_source" : ["response", "@timestamp"]            
+    }
+}
