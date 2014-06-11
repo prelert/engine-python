@@ -1,8 +1,8 @@
 {
-    "type" : "apache-access-gallery",
+    "type" : "apache-access",
     "job_config" : {
         "analysisConfig" : { 
-            "bucketSpan":3600,
+            "bucketSpan":600,
             "detectors":[{"function":"count","byFieldName":"response"}] 
         },
         "dataDescription" : {
@@ -13,7 +13,7 @@
     },
     "search" : {
         "filter" : { "match_all" : {}},
-        "sort":[{"@timestamp" : {"order":"asc"}}],
+        "sort":[{"@timestamp" : {"order":"asc"} }],
         "_source" : ["response", "@timestamp"]            
     }
 }
