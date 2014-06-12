@@ -44,7 +44,7 @@ import sys
 import time
 from datetime import datetime, timedelta, tzinfo
 
-from engineApiClient import EngineApiClient
+from prelert.engineApiClient import EngineApiClient
 
 # Default connection prarams
 HOST = 'localhost'
@@ -188,7 +188,7 @@ def main():
     }'
     
 
-    engine_client = EngineApiClient.EngineApiClient(args.host, BASE_URL, args.port)
+    engine_client = EngineApiClient(args.host, BASE_URL, args.port)
     (http_status_code, response) = engine_client.createJob(job_config)
     if http_status_code != 201:        
         print (http_status_code, json.dumps(response))

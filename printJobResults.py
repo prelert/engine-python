@@ -35,7 +35,7 @@ import json
 import logging
 import time
 
-from engineApiClient import EngineApiClient
+from prelert.engineApiClient import EngineApiClient
 
 # defaults
 HOST = 'localhost'
@@ -73,7 +73,7 @@ def main():
     job_id = args.jobid
 
     # Create the REST API client
-    engine_client = EngineApiClient.EngineApiClient(host, base_url, port)
+    engine_client = EngineApiClient(host, base_url, port)
 
     # Get all the buckets up to now
     logging.info("Get result buckets for job " + job_id)

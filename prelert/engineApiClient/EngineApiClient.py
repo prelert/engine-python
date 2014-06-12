@@ -51,6 +51,9 @@ class EngineApiClient:
         Returns a (http_status_code, response) tuple, if http_status_code != 200
         response is an error message
         """
+
+        self.connection.connect()
+
         self.connection.request("GET", self.base_url + "/jobs/" + job_id)
         response = self.connection.getresponse();
 
@@ -61,6 +64,8 @@ class EngineApiClient:
             logging.debug("Get job response = " + str(response.status))
 
         job = json.load(response)
+
+        self.connection.close()
 
         return (response.status, job)   
 
@@ -78,6 +83,7 @@ class EngineApiClient:
 
         url = self.base_url + "/jobs?skip={0}&take={1}".format(skip, take)
 
+        self.connection.connect()
         self.connection.request("GET", self.base_url + "/jobs")
         response = self.connection.getresponse();
 
@@ -88,6 +94,8 @@ class EngineApiClient:
             logging.debug("Get jobs response = " + str(response.status))
 
         jobs = json.load(response)
+
+        self.connection.close()
 
         return (response.status, jobs)
 
@@ -101,6 +109,7 @@ class EngineApiClient:
         """
         headers = {'Content-Type':'application/json'}
 
+        self.connection.connect()
         self.connection.request("POST", self.base_url + "/jobs", payload, headers)
 
         response = self.connection.getresponse();
@@ -112,6 +121,7 @@ class EngineApiClient:
             logging.debug("Create job response = " + str(response.status))
 
         data = json.load(response)
+        self.connection.close()
 
         return (response.status, data)  
 
@@ -129,6 +139,7 @@ class EngineApiClient:
 
         url = self.base_url + "/data/" + job_id        
 
+        self.connection.connect()
         self.connection.request("POST", url, data, headers)
         response = self.connection.getresponse();
         if response.status != 202:
@@ -140,7 +151,8 @@ class EngineApiClient:
             data = dict()
             # read all of the response before another request can be made
             response.read()
-                 
+            
+        self.connection.close()
 
         return (response.status, data)
 
@@ -173,7 +185,10 @@ class EngineApiClient:
 
         url = self.base_url + "/data/" + job_id
 
+        self.connection.connect()
+
         self.connection.putrequest("POST", url)
+        self.connection.putheader("Connection", "Keep-Alive")
         self.connection.putheader("Transfer-Encoding", "chunked")
         self.connection.putheader("Content-Type", "application/x-www-form-urlencoded")
         if gzipped:
@@ -206,7 +221,8 @@ class EngineApiClient:
             data = dict()
             # read all of the response before another request can be made
             response.read()
-                 
+        
+        self.connection.close()     
 
         yield (response.status, data)
         
@@ -219,8 +235,9 @@ class EngineApiClient:
         """
 
         url = self.base_url + "/data/" + job_id + "/close"
+        
+        self.connection.connect()
         self.connection.request("POST", url)
-
         response = self.connection.getresponse()
         if response.status != 202:
             logging.error("Close response = " + str(response.status) + " " 
@@ -234,6 +251,9 @@ class EngineApiClient:
             msg = json.loads(data)
         else:
             msg = dict()
+
+        self.connection.close()
+
         return (response.status, msg)    
 
     def getBucket(self, job_id, bucket_id, include_records=False):
@@ -250,21 +270,22 @@ class EngineApiClient:
         
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/{1}".format(job_id, bucket_id, expand)
+
+        self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
         if response.status != 200:
             logging.error("Get bucket response = " + str(response.status) + " " + response.reason)
-            response_data = json.load(response)
-            return (response.status, response_data)
         else:
             logging.debug("Get bucket response = " + str(response.status))
 
         # read all of the response        
         result_doc = json.load(response)
-        bucket = result_doc['document']
 
-        return (response.status, bucket)
+        self.connection.close()
+
+        return (response.status, result_doc)
 
     def getBuckets(self, job_id, skip=0, take=100, include_records=False):
         '''
@@ -283,21 +304,22 @@ class EngineApiClient:
         
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}?skip={1}&take={2}{3}".format(job_id, skip, take, expand)
+
+        self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
         if response.status != 200:
             logging.error("Get results response = " + str(response.status) + " " + response.reason)
-            response_data = json.load(response)
-            return (response.status, response_data)
         else:
             logging.debug("Get results response = " + str(response.status))
 
         # read all of the response        
         result_doc = json.load(response)
-        buckets = result_doc['documents']
 
-        return (response.status, buckets)
+        self.connection.close()
+
+        return (response.status, result_doc)
 
 
     def getBucketsByDate(self, job_id, start_date, end_date, include_records=False):
@@ -305,6 +327,8 @@ class EngineApiClient:
         Return all the job's buckets results between 2 dates.  If more
         than 1 page of results are available continue to with the next
         page until all results have been read.
+
+        The return value is an array of buckets
         
         start_date, end_date Must either be an epoch time or ISO 8601 format 
         see the Prelert Engine API docs for help.
@@ -333,6 +357,7 @@ class EngineApiClient:
         url = self.base_url + "/results/{0}?skip={1}&take={2}{3}{4}{5}".format(job_id, 
             skip, take, expand, start_arg, end_arg)
 
+        self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
@@ -356,12 +381,15 @@ class EngineApiClient:
             response = self.connection.getresponse();
             if response.status != 200:
                 logging.error("Get results response = " + str(response.status) + " " + response.reason)
-                
                 message = json.load(response)
+
+                self.connection.close()
                 return (response.status, message)
 
             result = json.load(response)
             buckets.extend(result['documents'])
+
+        self.connection.close()
 
         return (200, buckets)
 
@@ -371,6 +399,9 @@ class EngineApiClient:
         Return all the job's buckets results.  If more than 1 
         page of results are available continue to with the next
         page until all results have been read.
+
+        The return value is an array of buckets
+
         Returns a (http_status_code, buckets) tuple if sucessful else
         if http_status_code != 202 a (http_status_code, error_doc) tuple   
         is returned  
@@ -385,6 +416,8 @@ class EngineApiClient:
         
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}?skip={1}&take={2}{3}".format(job_id, skip, take, expand)
+
+        self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
@@ -407,10 +440,15 @@ class EngineApiClient:
             response = self.connection.getresponse();
             if response.status != 200:
                 logging.error("Get results response = " + str(response.status) + " " + response.reason)
-                return (response.status, buckets)
+
+                message = json.load(response)
+                self.connection.close()
+                return (response.status, message)
 
             result = json.load(response)
             buckets.extend(result['documents'])
+
+        self.connection.close()
 
         return (200, buckets)        
 
@@ -423,6 +461,7 @@ class EngineApiClient:
         """
 
         url = self.base_url + "/jobs/" + job_id
+        self.connection.connect()
         self.connection.request("DELETE", url)
 
         response = self.connection.getresponse()
@@ -436,6 +475,8 @@ class EngineApiClient:
         else:
             msg = dict()
 
+        self.connection.close()
+
         return (response.status, msg)
 
     def getZippedLogs(self, job_id):
@@ -446,6 +487,7 @@ class EngineApiClient:
         returns (http_status_code, error_doc)
         """
 
+        self.connection.connect()
         self.connection.request("GET", self.base_url + "/logs/" + job_id)
         response = self.connection.getresponse();
 
@@ -455,6 +497,8 @@ class EngineApiClient:
         else:
             logging.debug("Get zipped logs response = " + str(response.status))
             response_data = response.read()
+
+        self.connection.close()
 
         return (response.status, response_data)   
 
