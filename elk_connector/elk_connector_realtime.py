@@ -37,10 +37,10 @@ The program will indefinitely, interrupt it with Ctrl C and the
 script will close the API analytics Job and exit gracefully. 
 
 See:
-    python realtime_logstash.py --help
+    python elk_connector_realtime.py --help
 
 Example:  
-    python realtime_logstash.py --es-host=elasticsearchserver
+    python elk_connector_realtime.py --es-host=elasticsearchserver
         --api-host=prelertserver --job-id=jobid configs/syslog.json 
 """
 
