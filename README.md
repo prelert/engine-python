@@ -11,11 +11,13 @@ Prior to using the client, the Engine API needs to be installed and setup. Pleas
 
 Running the Examples
 ---------------------
-All the example scripts will run from the root directory of this repository 
-otherwise add this directory to your `PYTHONPATH` environment variable or copy
-the `prelert` folder to you Python `site-packages` directory. 
+First install the client using the standard setup script:
+
+    python setup.py install
+
 The client uses the standard json, httplib and logging packages no additional
-dependencies are required.
+dependencies are required. The example scripts use the `argparse` module that
+was added to Python in version 2.7.
 
 Using the Client
 -----------------
