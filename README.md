@@ -9,6 +9,10 @@ Prior to using the client, the Engine API needs to be installed and setup. Pleas
 - Download and install the Anomaly Detective Engine API from here: http://www.prelert.com/reg/anomaly-detective-engine-api.html
 - We recommend you try our quick start example: http://www.prelert.com/docs/engine_api/latest/quick-start.html
 
+If you are already familiar with connecting to the Engine API, then please check out:
+
+- [Elasticsearch ELK Connector](elk_connector)
+
 Running the Examples
 ---------------------
 First install the client using the standard setup script:
