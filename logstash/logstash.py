@@ -19,19 +19,19 @@
 """
 This script will extract historical log records from logstash
 and upload them to the Prelert Engine API. The program takes
-a number of arguments for non default connection settings and 
-optional start and end dates to limit the period to be analysed.
-The only required argument is the path to a config file containing
-the Engine Job configuration and the elasticsearch query. 
+a number of arguments for the Engine API and Elasticsearch connection 
+settings and optional start and end dates to limit the period begin 
+analysed. The only required argument is the path to a config file 
+containing the Engine Job configuration and the elasticsearch query. 
 
 See:
-    python elk.py --help
+    python logstash.py --help
 
 Example:    
     Read all the data from the beginning of January 2014 and 
     upload it to the API server running on host 'api.server'
 
-    python elk.py --start_date=2014-01-01 --api-host=api.server configs/apache-access.json
+    python logstash.py --start_date=2014-01-01 --api-host=api.server configs/apache-access.json
 """
 
 import argparse
