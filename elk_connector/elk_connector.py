@@ -53,7 +53,7 @@ ES_PORT = 9200
 # Prelert Engine API connection prarams
 API_HOST = 'localhost'
 API_PORT = 8080
-ABI_BASE_URL = 'engine/v0.3'
+API_BASE_URL = 'engine/v0.3'
 
 # The maximum number of documents to request from
 # Elasticsearch in each query
@@ -181,7 +181,7 @@ def main():
             return
 
     # The REST API client
-    engine_client = EngineApiClient(args.api_host, ABI_BASE_URL, args.api_port)
+    engine_client = EngineApiClient(args.api_host, API_BASE_URL, args.api_port)
     (http_status, response) = engine_client.createJob(json.dumps(config['job_config']))
     if http_status != 201:
         print "Error creatting job"
