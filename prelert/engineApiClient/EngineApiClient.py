@@ -30,8 +30,9 @@ class EngineApiClient:
         """
         Create a HTTP connection to host:port
         host is the host machine
-        base_url is the API URl this should contain the version number 
-          e.g. /engine/v0.3
+        base_url is the API URl this should contain the version number
+          e.g. /engine/v1
+        The default port is 8080
         """
         self.host = host
 
@@ -39,7 +40,7 @@ class EngineApiClient:
         if not base_url.startswith("/"):
             base_url = "/" + base_url
 
-        logging.info("Connecting to Engine REST API at {0}:{1}{2}".format(host, 
+        logging.info("Connecting to Engine REST API at {0}:{1}{2}".format(host,
             port, base_url))
         self.base_url = base_url
         self.connection = httplib.HTTPConnection(host, port)
@@ -58,23 +59,27 @@ class EngineApiClient:
         response = self.connection.getresponse();
 
         if response.status != 200:
-            logging.error("Get job response = " + str(response.status) + " " 
+            logging.error("Get job response = " + str(response.status) + " "
                 + response.reason)
         else:
             logging.debug("Get job response = " + str(response.status))
 
-        job = json.load(response)
+        data = response.read()
+        if data:
+            job = json.loads(data)
+        else:
+            job = dict()
 
         self.connection.close()
 
-        return (response.status, job)   
+        return (response.status, job)
 
 
     def getJobs(self, skip=0, take=100):
         '''
-        Get the first page of jobs in the system. 
+        Get the first page of jobs in the system.
         Defaults to the first 100 jobs use the skip and take parameters
-        to get further pages. 
+        to get further pages.
         skip the first N jobs
         take a maxium of this number of jobs
         Returns a (http_status_code, response) tuple, if http_status_code != 200
@@ -88,23 +93,28 @@ class EngineApiClient:
         response = self.connection.getresponse();
 
         if response.status != 200:
-            logging.error("Get jobs response = " + str(response.status) + " " 
+            logging.error("Get jobs response = " + str(response.status) + " "
                 + response.reason)
         else:
             logging.debug("Get jobs response = " + str(response.status))
 
-        jobs = json.load(response)
+        data = response.read()
+        if data:
+            jobs = json.loads(data)
+        else:
+            jobs = dict()
+
 
         self.connection.close()
 
         return (response.status, jobs)
 
-     
+
     def createJob(self, payload):
         """
         Create a new job.  Payload is the Json format job creation string.
         Returns a (http_status_code, json) tuple.  If http_status_code == 201
-        the JSON result doc will have an 'id' field set to the newly created 
+        the JSON result doc will have an 'id' field set to the newly created
         job id else json will be an error document.
         """
         headers = {'Content-Type':'application/json'}
@@ -115,35 +125,43 @@ class EngineApiClient:
         response = self.connection.getresponse();
 
         if response.status != 201:
-            logging.error("Create job response = " + str(response.status) + " " 
+            logging.error("Create job response = " + str(response.status) + " "
                 + response.reason)
         else:
             logging.debug("Create job response = " + str(response.status))
 
-        data = json.load(response)
+        data = response.read()
+        if data:
+            doc = json.loads(data)
+        else:
+            doc = dict()
+
+
         self.connection.close()
 
-        return (response.status, data)  
+        return (response.status, doc)
 
 
     def upload(self, job_id, data, gzipped=False):
         """
         Upload data to the jobs data endpoint.
         Data can be a string an open file object.
-        Returns a (http_status_code, response_data) tuple, if 
+        If the data is gzipped compressed set gzipped to True
+
+        Returns a (http_status_code, response_data) tuple, if
         http_status_code != 202 response_data is an error message.
         """
         headers = {}
         if gzipped:
             headers['Content-Encoding'] = 'gzip'
 
-        url = self.base_url + "/data/" + job_id        
+        url = self.base_url + "/data/" + job_id
 
         self.connection.connect()
         self.connection.request("POST", url, data, headers)
         response = self.connection.getresponse();
         if response.status != 202:
-            logging.error("Upload file response = " + str(response.status) 
+            logging.error("Upload file response = " + str(response.status)
                 + " " + response.reason)
             data = json.load(response)
         else:
@@ -151,7 +169,7 @@ class EngineApiClient:
             data = dict()
             # read all of the response before another request can be made
             response.read()
-            
+
         self.connection.close()
 
         return (response.status, data)
@@ -159,12 +177,12 @@ class EngineApiClient:
 
     def stream(self, job_id, data, gzipped=False):
         """
-        A Generator co-routine for uploading data in an *almost* asynchronous 
-        manner using chunked transfer encoding. This function uses the yield 
+        A Generator co-routine for uploading data in an *almost* asynchronous
+        manner using chunked transfer encoding. This function uses the yield
         statment to receive a data record then chunk encodes the record and
         writes it into the open upload stream.
 
-        First the generator must be initialised by calling send(None) 
+        First the generator must be initialised by calling send(None)
         this runs the code up to the first yield statement
 
             consumer = engineApiClient.stream(job_id, first_line_of_data)
@@ -173,10 +191,10 @@ class EngineApiClient:
         After this data can be sent iteratively by repeatedly calling the send
         method with new data. CSV records must end in a newline character.
 
-            for record in data:      
+            for record in data:
                 consumer.send(record + '\n')
 
-        When all the data is sent call send with an empty string and the 
+        When all the data is sent call send with an empty string and the
         respone is returned.
 
             (http_status, response) = consumer.send('')
@@ -197,11 +215,11 @@ class EngineApiClient:
 
         while data:
             # Send in chunked transfer encoding format. Write the hexidecimal
-            # length of the data message followed by '\r\n' followed by the 
+            # length of the data message followed by '\r\n' followed by the
             # data and another '\r\n'
 
             # strip the '0x' of the hex string
-            data_len = hex(len(data))[2:]        
+            data_len = hex(len(data))[2:]
             msg = data_len + '\r\n' + data + '\r\n'
 
             self.connection.send(msg)
@@ -213,7 +231,7 @@ class EngineApiClient:
 
         response = self.connection.getresponse();
         if response.status != 202:
-            logging.error("Upload file response = " + str(response.status) 
+            logging.error("Upload file response = " + str(response.status)
                 + " " + response.reason)
             data = json.load(response)
         else:
@@ -221,31 +239,31 @@ class EngineApiClient:
             data = dict()
             # read all of the response before another request can be made
             response.read()
-        
-        self.connection.close()     
+
+        self.connection.close()
 
         yield (response.status, data)
-        
+
 
     def close(self, job_id):
         """
         Close the job once data has been streamed
-        Returns a (http_status_code, response_data) tuple, if 
+        Returns a (http_status_code, response_data) tuple, if
         http_status_code != 202 response_data is an error object.
         """
 
         url = self.base_url + "/data/" + job_id + "/close"
-        
+
         self.connection.connect()
         self.connection.request("POST", url)
         response = self.connection.getresponse()
         if response.status != 202:
-            logging.error("Close response = " + str(response.status) + " " 
+            logging.error("Close response = " + str(response.status) + " "
                 + response.reason)
         else:
             logging.debug("Close response data = " + response.read())
 
-        # read all of the response before another request can be made    
+        # read all of the response before another request can be made
         data = response.read()
         if data:
             msg = json.loads(data)
@@ -254,22 +272,28 @@ class EngineApiClient:
 
         self.connection.close()
 
-        return (response.status, msg)    
+        return (response.status, msg)
 
-    def getBucket(self, job_id, bucket_id, include_records=False):
+    def getBucket(self, job_id, bucket_id, include_records=False,
+            anomalyScoreThreshold=None, unusualScoreThreshold=None):
         '''
-        Get the individual result bucket
-        Returns a (http_status_code, bucket) tuple if sucessful else
-        if http_status_code != 200 (http_status_code, error_doc) is   
-        returned             
-        '''        
-        expand = ''
-        if include_records:
-            expand = '&expand=true'
+        Get the individual result bucket for the job and bucket id
+        If include_records is True the anomaly records are nested in the
+        resulting dictionary.
 
-        
+        Returns a (http_status_code, bucket) tuple if successful else
+        if http_status_code != 200 (http_status_code, error_doc) is
+        returned
+        '''
+
+        query_char = '?'
+        query = ''
+        if include_records:
+            query = '?expand=true'
+            query_char = '&'
+
         headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}/{1}".format(job_id, bucket_id, expand)
+        url = self.base_url + "/results/{0}/{1}{2}".format(job_id, bucket_id, query)
 
         self.connection.connect()
         self.connection.request("GET", url)
@@ -280,65 +304,89 @@ class EngineApiClient:
         else:
             logging.debug("Get bucket response = " + str(response.status))
 
-        # read all of the response        
-        result_doc = json.load(response)
+        # read all of the response
+        data = response.read()
+        if data:
+            msg = json.loads(data)
+        else:
+            msg = dict()
 
         self.connection.close()
 
-        return (response.status, result_doc)
+        return (response.status, msg)
 
-    def getBuckets(self, job_id, skip=0, take=100, include_records=False):
+    def getBuckets(self, job_id, skip=0, take=100, include_records=False,
+                anomalyScoreThreshold=None, unusualScoreThreshold=None):
         '''
-        Return a page of the job's buckets results. 
+        Return a page of the job's buckets results.
         skip the first N buckets
         take a maxium of this number of buckets
-        include_records Anomaly records are included in the buckets
-        Returns a (http_status_code, buckets) tuple if sucessful else
-        if http_status_code != 202 a (http_status_code, error_doc) is   
-        returned   
-        '''
-        expand = ''
-        if include_records:
-            expand = '&expand=true'
+        include_records Anomaly records are included in the buckets.
+        anomalyScoreThreshold If not None the return buckets where anomalyScore >= this value 
+        unusualScoreThreshold If not None the return buckets where unusualScore >= this value
 
+        Returns a (http_status_code, buckets) tuple if successful else
+        if http_status_code != 200 a (http_status_code, error_doc) is
+        returned
+        '''
+
+        query = ''
+        if include_records:
+            query = '&expand=true'
+            query_char = '&'
         
+        if anomalyScoreThreshold:
+            query += '&anomalyScore=' + str(anomalyScoreThreshold)
+
+        if unusualScoreThreshold:
+            query += '&unusualScore=' + str(unusualScoreThreshold)
+
         headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}?skip={1}&take={2}{3}".format(job_id, skip, take, expand)
+        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}".format(
+            job_id, skip, take, query)
 
         self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
         if response.status != 200:
-            logging.error("Get results response = " + str(response.status) + " " + response.reason)
+            logging.error("Get buckets response = " + str(response.status) + " " + response.reason)
         else:
-            logging.debug("Get results response = " + str(response.status))
+            logging.debug("Get buckets response = " + str(response.status))
 
-        # read all of the response        
-        result_doc = json.load(response)
+        # read all of the response
+        data = response.read()
+        if data:
+            msg = json.loads(data)
+        else:
+            msg = dict()
 
         self.connection.close()
 
-        return (response.status, result_doc)
+        return (response.status, msg)
 
 
-    def getBucketsByDate(self, job_id, start_date, end_date, include_records=False):
+    def getBucketsByDate(self, job_id, start_date, end_date, include_records=False,
+            anomalyScoreThreshold=None, unusualScoreThreshold=None):
+
         """
         Return all the job's buckets results between 2 dates.  If more
-        than 1 page of results are available continue to with the next
-        page until all results have been read.
+        than 1 page of buckets are available continue to with the next
+        page until all buckets have been read. An array of buckets is
+        returned.
 
-        The return value is an array of buckets
-        
-        start_date, end_date Must either be an epoch time or ISO 8601 format 
+        start_date, end_date Must either be an epoch time or ISO 8601 format
         see the Prelert Engine API docs for help.
-        include_records Anomaly records are included in the buckets   
-        Returns a (http_status_code, buckets) tuple if sucessful else
-        if http_status_code != 202 a (http_status_code, error_doc) is   
-        returned     
+        include_records Anomaly records are included in the buckets
+        anomalyScoreThreshold If not None the return buckets where anomalyScore >= this value 
+        unusualScoreThreshold If not None the return buckets where unusualScore >= this value
+
+        Returns a (http_status_code, buckets) tuple if successful else
+        if http_status_code != 200 a (http_status_code, error_doc) is
+        returned
         """
 
-        skip = 0        
+        skip = 0
         take = 100
         expand = ''
         if include_records:
@@ -350,23 +398,29 @@ class EngineApiClient:
 
         end_arg = ''
         if end_date:
-            end_arg = '&end=' + end_date            
+            end_arg = '&end=' + end_date
 
-        
+        score_filter = ''
+        if anomalyScoreThreshold:
+            score_filter += '&anomalyScore=' + str(anomalyScoreThreshold)
+
+        if unusualScoreThreshold:
+            score_filter += '&unusualScore=' + str(unusualScoreThreshold)
+
         headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}?skip={1}&take={2}{3}{4}{5}".format(job_id, 
-            skip, take, expand, start_arg, end_arg)
+        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}".format(job_id,
+            skip, take, expand, start_arg, end_arg, score_filter)
 
         self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
         if response.status != 200:
-            logging.error("Get results response = " + str(response.status) + " " + response.reason)
+            logging.error("Get buckets by date response = " + str(response.status) + " " + response.reason)
             response_data = json.load(response)
             return (response.status, response_data)
         else:
-            logging.debug("Get results response = " + str(response.status))
+            logging.debug("Get buckets by date response = " + str(response.status))
 
 
         result = json.load(response)
@@ -375,12 +429,12 @@ class EngineApiClient:
         # is there another page of results
         while result['nextPage']:
             skip += take
-            url = self.base_url + "/results/{0}?skip={1}&take={2}{3}{4}{5}".format(job_id, 
+            url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}".format(job_id,
                                 skip, take, expand, start_arg, end_arg)
             self.connection.request("GET", url)
             response = self.connection.getresponse();
             if response.status != 200:
-                logging.error("Get results response = " + str(response.status) + " " + response.reason)
+                logging.error("Get buckets by date response = " + str(response.status) + " " + response.reason)
                 message = json.load(response)
 
                 self.connection.close()
@@ -394,52 +448,67 @@ class EngineApiClient:
         return (200, buckets)
 
 
-    def getAllBuckets(self, job_id, include_records=False):
+    def getAllBuckets(self, job_id, include_records=False,
+                anomalyScoreThreshold=None, unusualScoreThreshold=None):
         """
-        Return all the job's buckets results.  If more than 1 
-        page of results are available continue to with the next
-        page until all results have been read.
+        Return all the job's buckets results.  If more than 1
+        page of buckets are available continue to with the next
+        page until all results have been read. An array of buckets is
+        returned.
 
-        The return value is an array of buckets
+        include_records Anomaly records are included in the buckets
+        anomalyScoreThreshold If not None the return buckets where anomalyScore >= this value 
+        unusualScoreThreshold If not None the return buckets where unusualScore >= this value        
 
-        Returns a (http_status_code, buckets) tuple if sucessful else
-        if http_status_code != 202 a (http_status_code, error_doc) tuple   
-        is returned  
+        Returns a (http_status_code, buckets) tuple if successful else
+        if http_status_code != 200 a (http_status_code, error_doc) tuple
+        is returned
         """
 
-        skip = 0        
+        skip = 0
         take = 100
         expand = ''
         if include_records:
             expand = '&expand=true'
 
-        
+        score_filter = ''
+        if anomalyScoreThreshold:
+            score_filter += '&anomalyScore=' + str(anomalyScoreThreshold)
+
+        if unusualScoreThreshold:
+            score_filter += '&unusualScore=' + str(unusualScoreThreshold)       
+
         headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}?skip={1}&take={2}{3}".format(job_id, skip, take, expand)
+        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}".format(
+            job_id, skip, take, expand, score_filter)
+
+
 
         self.connection.connect()
         self.connection.request("GET", url)
         response = self.connection.getresponse();
 
         if response.status != 200:
-            logging.error("Get results response = " + str(response.status) + " " + response.reason)
+            logging.error("Get all buckets response = " + str(response.status) + " " + response.reason)
             response_data = json.load(response)
             return (response.status, response_data)
         else:
-            logging.debug("Get results response = " + str(response.status))
+            logging.debug("Get all buckets response = " + str(response.status))
 
-        
+
         result = json.load(response)
         buckets = result['documents']
 
         # is there another page of results
         while result['nextPage']:
             skip += take
-            url = self.base_url + "/results/{0}?skip={1}&take={2}{3}".format(job_id, skip, take, expand)
+            url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}".format(
+                job_id, skip, take, expand, score_filter)
+
             self.connection.request("GET", url)
             response = self.connection.getresponse();
             if response.status != 200:
-                logging.error("Get results response = " + str(response.status) + " " + response.reason)
+                logging.error("Get all buckets response = " + str(response.status) + " " + response.reason)
 
                 message = json.load(response)
                 self.connection.close()
@@ -450,14 +519,84 @@ class EngineApiClient:
 
         self.connection.close()
 
-        return (200, buckets)        
+        return (200, buckets)
+
+
+    def getRecords(self, job_id, skip=0, take=100, start_date=None,
+            end_date=None, sort_field=None, sort_descending=True,
+            anomalyScoreThreshold=None, unusualScoreThreshold=None):
+        """
+        Get a page of the job's anomaly records.
+        Records can be filtered by start & end date parameters and the scores.
+
+        skip the first N buckets
+        take a maxium of this number of buckets
+        include_records Anomaly records are included in the buckets.
+        start_date, end_date Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help
+        sort_field The field to sort the results by, ignored if None
+        sort_descending If sort_field is not None then sort records
+            in descending order if True else sort ascending
+        anomalyScoreThreshold If not None the return only records where anomalyScore >= this value 
+        unusualScoreThreshold If not None the return only records where unusualScore >= this value        
+
+        Returns a (http_status_code, records) tuple if successful else
+        if http_status_code != 200 a (http_status_code, error_doc) is
+        returned
+        """
+
+        expand = ''
+
+        start_arg = ''
+        if start_date:
+            start_arg = '&start=' + start_date
+
+        end_arg = ''
+        if end_date:
+            end_arg = '&end=' + end_date
+
+        sort_arg = ''
+        if sort_field:
+            sort_arg = "&sort=" + sort_field + '&desc=' + 'true' if sort_descending else 'false'
+
+        filter_arg = ''
+        if anomalyScoreThreshold:
+            filter_arg = '&unusualScore=' + str(anomalyScoreThreshold)
+
+        if unusualScoreThreshold:
+            filter_arg += '&unusualScore=' + str(unusualScoreThreshold)
+
+
+        headers = {'Content-Type':'application/json'}
+        url = self.base_url + "/results/{0}/records?skip={1}&take={2}{3}{4}{5}{6}".format(
+            job_id, skip, take, start_arg, end_arg, sort_arg, filter_arg)
+
+        self.connection.connect()
+        self.connection.request("GET", url)
+        response = self.connection.getresponse();
+
+        if response.status != 200:
+            logging.error("Get records response = " + str(response.status) + " " + response.reason)
+        else:
+            logging.debug("Get records response = " + str(response.status))
+
+        # read all of the response
+        data = response.read()
+        if data:
+            msg = json.loads(data)
+        else:
+            msg = dict()
+
+        self.connection.close()
+
+        return (response.status, msg)
 
 
     def delete(self, job_id):
         """
         Delete a job.
-        Returns a (http_status_code, response_data) tuple, if 
-        http_status_code != 200 response_data is an error object.        
+        Returns a (http_status_code, response_data) tuple, if
+        http_status_code != 200 response_data is an error object.
         """
 
         url = self.base_url + "/jobs/" + job_id
@@ -468,7 +607,7 @@ class EngineApiClient:
         if response.status != 200:
             logging.error("Delete response = " + str(response.status) + " "
                 + response.reason)
-        
+
         data = response.read()
         if data:
             msg = json.loads(data)
@@ -481,9 +620,9 @@ class EngineApiClient:
 
     def getZippedLogs(self, job_id):
         """
-        Download the zipped log files and 
+        Download the zipped log files and
         return a tuple of (http_status_code, zip_data) if http_status_code
-        == 200 else the error is read into a json document and 
+        == 200 else the error is read into a json document and
         returns (http_status_code, error_doc)
         """
 
@@ -500,5 +639,5 @@ class EngineApiClient:
 
         self.connection.close()
 
-        return (response.status, response_data)   
+        return (response.status, response_data)
 
