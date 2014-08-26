@@ -17,16 +17,14 @@
 #                                                                          #
 ############################################################################
 '''
-Pull the latest results for the provided job id then loop 
-indefinitley polling 1 per second for any new results.
-Prints the bucket timestamp, bucket id and anomaly score.
+Pull all the anomaly records for the provided job id and print
+the timestamp, anomaly score and unusual score
 
 The script is invoked with 1 positional argument -the id of the 
 job to query the results of. Additional optional arguments
 to specify the location of the Engine API. Run the script with 
 '--help' to see the options.
-
-Use Ctrl-C to stop this script
+ 
 '''
 
 import argparse
@@ -40,10 +38,7 @@ from prelert.engineApiClient import EngineApiClient
 # defaults
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v0.3'
-
-# time between polling for new results
-POLL_INTERVAL_SECS = 1.0
+BASE_URL = 'engine/v1'
 
 
 def setupLogging():
@@ -52,61 +47,66 @@ def setupLogging():
     '''    
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(levelname)s %(message)s')
 
+
 def parseArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", help="The Prelert Engine API host, defaults to "
         + HOST, default=HOST)
     parser.add_argument("--port", help="The Prelert Engine API port, defaults to "
         + str(PORT), default=PORT)
+    parser.add_argument("--anomalyScore", help="Filter out buckets with an anomalyScore "  
+        + "less than this", type=float, default=0.0)
+    parser.add_argument("--unusualScore", help="Filter out buckets with an unusualScore "  
+        + "less than this", type=float, default=0.0)       
     parser.add_argument("jobid", help="The jobId to request results from", default="0")
     return parser.parse_args()   
+
+
+def printHeader():
+    print "Date,Unusual Score,Anomaly Score"
+
+def printRecords(records):
+    for record in records:
+        print "{0},{1},{2}".format(record['timestamp'], record['unusualScore'], 
+            record['anomalyScore'])
 
 
 def main():
 
     setupLogging()
 
-    args = parseArguments()
-    host = args.host
-    port = args.port
-    base_url = BASE_URL
+    args = parseArguments()    
     job_id = args.jobid
 
     # Create the REST API client
-    engine_client = EngineApiClient(host, base_url, port)
+    engine_client = EngineApiClient(args.host, BASE_URL, args.port)
 
-    # Get all the buckets up to now
-    logging.info("Get result buckets for job " + job_id)
-    (http_status_code, response) = engine_client.getAllBuckets(job_id)
+    # Get all the records up to now
+    logging.info("Get records for job " + job_id)
+
+    skip = 0
+    take = 200
+    (http_status_code, response) = engine_client.getRecords(job_id, skip, take,
+        anomalyScoreThreshold=args.anomalyScore, unusualScoreThreshold=args.unusualScore)
     if http_status_code != 200:
         print (http_status_code, json.dumps(response))
         return
-    
-    
-    print "Date,BucketId,AnomalyScore"
-    for bucket in response:
-        print "{0},{1},{2}".format(bucket['timestamp'], bucket['id'], bucket['anomalyScore'])
-    
-    if len(response) > 0:
-        next_bucket_id = int(response[-1]['id']) + 1
-    else:
-        next_bucket_id = None
 
-    # Wait POLL_INTERVAL_SECS then query for any new buckets
-    while True:
-        time.sleep(POLL_INTERVAL_SECS)
+    hit_count = int(response['hitCount'])
 
-        (http_status_code, response) = engine_client.getBucketsByDate(job_id=job_id, 
-            start_date=str(next_bucket_id), end_date=None)
+    printHeader()
+    printRecords(response['documents'])
+
+    while (skip + take) < hit_count:
+        skip += take
+
+        (http_status_code, response) = engine_client.getRecords(job_id, skip, take,
+            anomalyScoreThreshold=args.anomalyScore, unusualScoreThreshold=args.unusualScore)
         if http_status_code != 200:
             print (http_status_code, json.dumps(response))
-            break
+            return
 
-        for bucket in response:
-            print "{0},{1},{2}".format(bucket['timestamp'], bucket['id'], bucket['anomalyScore'])
-        
-        if len(response) > 0:
-            next_bucket_id = int(response[-1]['id']) + 1
+        printRecords(response['documents'])
 
 
 if __name__ == "__main__":
