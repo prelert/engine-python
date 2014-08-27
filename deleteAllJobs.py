@@ -35,14 +35,13 @@ from prelert.engineApiClient import EngineApiClient
 # defaults
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v0.3'
-
+BASE_URL = 'engine/v1'
 
 def parseArguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", help="The Prelert Engine API host, defaults to "
+    parser.add_argument("--host", help="The Prelert Engine API host defaults to "
         + HOST, default=HOST)
-    parser.add_argument("--port", help="The Prelert Engine API port, defaults to "
+    parser.add_argument("--port", help="The Prelert Engine API port defaults to "
         + str(PORT), default=PORT)
     
     return parser.parse_args()   
@@ -52,10 +51,10 @@ def main():
     args = parseArguments()
     host = args.host
     port = args.port
-    base_url = BASE_URL
+
 
     # Create the REST API client
-    engine_client = EngineApiClient(host, base_url, port)
+    engine_client = EngineApiClient(host, BASE_URL, port)
 
     while True:
         (http_status_code, response) = engine_client.getJobs()
