@@ -145,7 +145,7 @@ class EngineApiClient:
     def upload(self, job_id, data, gzipped=False):
         """
         Upload data to the jobs data endpoint.
-        Data can be a string an open file object.
+        Data can be a string or an open file object.
         If the data is gzipped compressed set gzipped to True
 
         Returns a (http_status_code, response_data) tuple, if
@@ -274,8 +274,7 @@ class EngineApiClient:
 
         return (response.status, msg)
 
-    def getBucket(self, job_id, bucket_id, include_records=False,
-            anomalyScoreThreshold=None, unusualScoreThreshold=None):
+    def getBucket(self, job_id, bucket_id, include_records=False):
         '''
         Get the individual result bucket for the job and bucket id
         If include_records is True the anomaly records are nested in the
@@ -316,14 +315,16 @@ class EngineApiClient:
         return (response.status, msg)
 
     def getBuckets(self, job_id, skip=0, take=100, include_records=False,
-                anomalyScoreThreshold=None, unusualScoreThreshold=None):
+                unusual_score_filter_value=None, anomaly_score_filter_value=None):
         '''
         Return a page of the job's buckets results.
         skip the first N buckets
         take a maxium of this number of buckets
         include_records Anomaly records are included in the buckets.
-        anomalyScoreThreshold If not None the return buckets where anomalyScore >= this value 
-        unusualScoreThreshold If not None the return buckets where unusualScore >= this value
+        unusual_score_filter_value If not none return only the records with
+            a recordUnusualness >= unusual_score_filter_value
+        anomaly_score_filter_value If not none return only the records with
+            an anomalyScore >= anomaly_score_filter_value   
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -333,13 +334,14 @@ class EngineApiClient:
         query = ''
         if include_records:
             query = '&expand=true'
-            query_char = '&'
         
-        if anomalyScoreThreshold:
-            query += '&anomalyScore=' + str(anomalyScoreThreshold)
+        if unusual_score_filter_value:
+            query += '&recordUnusualness=' + str(unusual_score_filter_value)
 
-        if unusualScoreThreshold:
-            query += '&unusualScore=' + str(unusualScoreThreshold)
+        if anomaly_score_filter_value:
+            query += '&anomalyScore=' + str(anomaly_score_filter_value)  
+
+
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}".format(
@@ -367,7 +369,7 @@ class EngineApiClient:
 
 
     def getBucketsByDate(self, job_id, start_date, end_date, include_records=False,
-            anomalyScoreThreshold=None, unusualScoreThreshold=None):
+            unusual_score_filter_value=None, anomaly_score_filter_value=None):
 
         """
         Return all the job's buckets results between 2 dates.  If more
@@ -378,8 +380,10 @@ class EngineApiClient:
         start_date, end_date Must either be an epoch time or ISO 8601 format
         see the Prelert Engine API docs for help.
         include_records Anomaly records are included in the buckets
-        anomalyScoreThreshold If not None the return buckets where anomalyScore >= this value 
-        unusualScoreThreshold If not None the return buckets where unusualScore >= this value
+        unusual_score_filter_value If not none return only the records with
+            a recordUnusualness >= unusual_score_filter_value
+        anomaly_score_filter_value If not none return only the records with
+            an anomalyScore >= anomaly_score_filter_value   
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -401,11 +405,11 @@ class EngineApiClient:
             end_arg = '&end=' + end_date
 
         score_filter = ''
-        if anomalyScoreThreshold:
-            score_filter += '&anomalyScore=' + str(anomalyScoreThreshold)
+        if unusual_score_filter_value:
+            score_filter = '&recordUnusualness=' + str(unusual_score_filter_value)
 
-        if unusualScoreThreshold:
-            score_filter += '&unusualScore=' + str(unusualScoreThreshold)
+        if anomaly_score_filter_value:
+            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)  
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}".format(job_id,
@@ -449,7 +453,7 @@ class EngineApiClient:
 
 
     def getAllBuckets(self, job_id, include_records=False,
-                anomalyScoreThreshold=None, unusualScoreThreshold=None):
+                unusual_score_filter_value=None, anomaly_score_filter_value=None):
         """
         Return all the job's buckets results.  If more than 1
         page of buckets are available continue to with the next
@@ -457,8 +461,10 @@ class EngineApiClient:
         returned.
 
         include_records Anomaly records are included in the buckets
-        anomalyScoreThreshold If not None the return buckets where anomalyScore >= this value 
-        unusualScoreThreshold If not None the return buckets where unusualScore >= this value        
+        unusual_score_filter_value If not none return only the records with
+            a recordUnusualness >= unusual_score_filter_value
+        anomaly_score_filter_value If not none return only the records with
+            an anomalyScore >= anomaly_score_filter_value       
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) tuple
@@ -472,11 +478,11 @@ class EngineApiClient:
             expand = '&expand=true'
 
         score_filter = ''
-        if anomalyScoreThreshold:
-            score_filter += '&anomalyScore=' + str(anomalyScoreThreshold)
+        if unusual_score_filter_value:
+            score_filter = '&recordUnusualness=' + str(unusual_score_filter_value)
 
-        if unusualScoreThreshold:
-            score_filter += '&unusualScore=' + str(unusualScoreThreshold)       
+        if anomaly_score_filter_value:
+            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)    
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}".format(
@@ -524,7 +530,7 @@ class EngineApiClient:
 
     def getRecords(self, job_id, skip=0, take=100, start_date=None,
             end_date=None, sort_field=None, sort_descending=True,
-            anomalyScoreThreshold=None, unusualScoreThreshold=None):
+            unusual_score_filter_value=None, anomaly_score_filter_value=None):
         """
         Get a page of the job's anomaly records.
         Records can be filtered by start & end date parameters and the scores.
@@ -537,8 +543,10 @@ class EngineApiClient:
         sort_field The field to sort the results by, ignored if None
         sort_descending If sort_field is not None then sort records
             in descending order if True else sort ascending
-        anomalyScoreThreshold If not None the return only records where anomalyScore >= this value 
-        unusualScoreThreshold If not None the return only records where unusualScore >= this value        
+        unusual_score_filter_value If not none return only the records with
+            a recordUnusualness >= unusual_score_filter_value
+        anomaly_score_filter_value If not none return only the records with
+            an anomalyScore >= anomaly_score_filter_value    
 
         Returns a (http_status_code, records) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -560,11 +568,11 @@ class EngineApiClient:
             sort_arg = "&sort=" + sort_field + '&desc=' + 'true' if sort_descending else 'false'
 
         filter_arg = ''
-        if anomalyScoreThreshold:
-            filter_arg = '&unusualScore=' + str(anomalyScoreThreshold)
+        if unusual_score_filter_value:
+            filter_arg = '&recordUnusualness=' + str(unusual_score_filter_value)
 
-        if unusualScoreThreshold:
-            filter_arg += '&unusualScore=' + str(unusualScoreThreshold)
+        if anomaly_score_filter_value:
+            filter_arg += '&anomalyScore=' + str(anomaly_score_filter_value)
 
 
         headers = {'Content-Type':'application/json'}
