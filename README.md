@@ -12,6 +12,7 @@ Prior to using the client, the Engine API needs to be installed and setup. Pleas
 If you are already familiar with connecting to the Engine API, then please check out:
 
 - [Elasticsearch ELK Connector](elk_connector)
+- [AWS CloudWatch Connector](cloudwatch)
 
 Running the Examples
 ---------------------
