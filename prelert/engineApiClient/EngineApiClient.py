@@ -315,14 +315,14 @@ class EngineApiClient:
         return (response.status, msg)
 
     def getBuckets(self, job_id, skip=0, take=100, include_records=False,
-                unusual_score_filter_value=None, anomaly_score_filter_value=None):
+                normalized_probability_filter_value=None, anomaly_score_filter_value=None):
         '''
         Return a page of the job's buckets results.
         skip the first N buckets
         take a maxium of this number of buckets
         include_records Anomaly records are included in the buckets.
-        unusual_score_filter_value If not none return only the records with
-            a recordUnusualness >= unusual_score_filter_value
+        normalized_probability_filter_value If not none return only the records with
+            a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value   
 
@@ -335,8 +335,8 @@ class EngineApiClient:
         if include_records:
             query = '&expand=true'
         
-        if unusual_score_filter_value:
-            query += '&recordUnusualness=' + str(unusual_score_filter_value)
+        if normalized_probability_filter_value:
+            query += '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
             query += '&anomalyScore=' + str(anomaly_score_filter_value)  
@@ -369,7 +369,7 @@ class EngineApiClient:
 
 
     def getBucketsByDate(self, job_id, start_date, end_date, include_records=False,
-            unusual_score_filter_value=None, anomaly_score_filter_value=None):
+            normalized_probability_filter_value=None, anomaly_score_filter_value=None):
 
         """
         Return all the job's buckets results between 2 dates.  If more
@@ -380,8 +380,8 @@ class EngineApiClient:
         start_date, end_date Must either be an epoch time or ISO 8601 format
         see the Prelert Engine API docs for help.
         include_records Anomaly records are included in the buckets
-        unusual_score_filter_value If not none return only the records with
-            a recordUnusualness >= unusual_score_filter_value
+        normalized_probability_filter_value If not none return only the records with
+            a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value   
 
@@ -405,8 +405,8 @@ class EngineApiClient:
             end_arg = '&end=' + end_date
 
         score_filter = ''
-        if unusual_score_filter_value:
-            score_filter = '&recordUnusualness=' + str(unusual_score_filter_value)
+        if normalized_probability_filter_value:
+            score_filter = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
             score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)  
@@ -453,7 +453,7 @@ class EngineApiClient:
 
 
     def getAllBuckets(self, job_id, include_records=False,
-                unusual_score_filter_value=None, anomaly_score_filter_value=None):
+                normalized_probability_filter_value=None, anomaly_score_filter_value=None):
         """
         Return all the job's buckets results.  If more than 1
         page of buckets are available continue to with the next
@@ -461,8 +461,8 @@ class EngineApiClient:
         returned.
 
         include_records Anomaly records are included in the buckets
-        unusual_score_filter_value If not none return only the records with
-            a recordUnusualness >= unusual_score_filter_value
+        normalized_probability_filter_value If not none return only the records with
+            a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value       
 
@@ -478,8 +478,8 @@ class EngineApiClient:
             expand = '&expand=true'
 
         score_filter = ''
-        if unusual_score_filter_value:
-            score_filter = '&recordUnusualness=' + str(unusual_score_filter_value)
+        if normalized_probability_filter_value:
+            score_filter = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
             score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)    
@@ -530,7 +530,7 @@ class EngineApiClient:
 
     def getRecords(self, job_id, skip=0, take=100, start_date=None,
             end_date=None, sort_field=None, sort_descending=True,
-            unusual_score_filter_value=None, anomaly_score_filter_value=None):
+            normalized_probability_filter_value=None, anomaly_score_filter_value=None):
         """
         Get a page of the job's anomaly records.
         Records can be filtered by start & end date parameters and the scores.
@@ -543,8 +543,8 @@ class EngineApiClient:
         sort_field The field to sort the results by, ignored if None
         sort_descending If sort_field is not None then sort records
             in descending order if True else sort ascending
-        unusual_score_filter_value If not none return only the records with
-            a recordUnusualness >= unusual_score_filter_value
+        normalized_probability_filter_value If not none return only the records with
+            a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value    
 
@@ -568,8 +568,8 @@ class EngineApiClient:
             sort_arg = "&sort=" + sort_field + '&desc=' + 'true' if sort_descending else 'false'
 
         filter_arg = ''
-        if unusual_score_filter_value:
-            filter_arg = '&recordUnusualness=' + str(unusual_score_filter_value)
+        if normalized_probability_filter_value:
+            filter_arg = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
             filter_arg += '&anomalyScore=' + str(anomaly_score_filter_value)
