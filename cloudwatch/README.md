@@ -2,7 +2,7 @@ Prelert - Data Analytics for AWS CloudWatch
 ==============================
 
 Prelert's analytics provides fast insights into your machine data. This simple example
-shows how to use Prelert Anomaly Detection for your CloudWatch monitoring data.
+shows how to use Anomaly Detection for your CloudWatch monitoring data.
 
 
 Pre-requisites and Installation
