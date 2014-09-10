@@ -2,7 +2,7 @@ Prelert - Data Analytics for AWS CloudWatch
 ==============================
 
 Prelert's analytics provides fast insights into your machine data. This simple example
-shows how to leverage Prelert for you CloudWatch monitoring data.
+shows how to use Prelert Anomaly Detection for your CloudWatch monitoring data.
 
 
 Pre-requisites and Installation
@@ -81,8 +81,8 @@ Job Configuration
 
 The Prelert Engine job is defined as having one detector configured to analyze the mean of the field named 
 'Average' by the field 'metric_name' where the value of 'metric_name' is one of the 
-AWS metrics i.e. CPUUtilization, DiskWriteOps, etc. The analysis is partition by AWS instance ID.
-`bucketSpan` is set to 300 seconds, which is the same as the CloudWatch reporting interval.
+AWS metrics i.e. CPUUtilization, DiskWriteOps, etc. The analysis is partitioned by AWS instance ID.
+`bucketSpan` is set to 300 seconds, which should be set to the same as the CloudWatch reporting interval.
 
     "analysisConfig" : {
         "bucketSpan":' 300,
