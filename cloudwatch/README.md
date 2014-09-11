@@ -15,6 +15,7 @@ Pre-requisites and Installation
 Install the Prelert Python client from GitHub
 
     git clone https://github.com/prelert/engine-python.git
+    cd engine-python
     python setup.py install
 
 Boto can either be installed using `pip`
