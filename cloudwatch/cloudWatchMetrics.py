@@ -58,7 +58,11 @@ API_HOST = 'localhost'
 API_PORT = 8080
 ABI_BASE_URL = 'engine/v1'
 
+''' Interval between query new data from CloudWatch (seconds)'''
 UPDATE_INTERVAL=300
+
+''' In realtime mode run this many seconds behind realtime '''
+DELAY=600
 
 ''' 
     Prelert Engine job configuration.
@@ -66,8 +70,7 @@ UPDATE_INTERVAL=300
     'Average' by the field 'metric_name' where the value of 'metric_name' 
     is one of the AWS metrics e.g. CPUUtilization, DiskWriteOps, etc.
     The analysis is partition by AWS instance ID.
-    bucketSpan is set to 300 seconds, which is the as the CloudWatch
-    reporting interval.
+    bucketSpan is set the same as the CloudWatch reporting interval.
 '''
 JOB_CONFIG = '{"analysisConfig" : {\
                     "bucketSpan":' + str(UPDATE_INTERVAL) + ',\
@@ -144,11 +147,12 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
     If end_date == None then run until the time now. 
     '''    
     end = start_date
+    delta = timedelta(seconds=UPDATE_INTERVAL)
 
     while True:
 
         start = end
-        end = start + timedelta(minutes=5)
+        end = start + delta
 
         end_condition = end_date if end_date != None else datetime.utcnow()
         if end > end_condition:
@@ -190,15 +194,15 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
     keyboard interrupt (Ctrl C) and exit gracefully
     '''
     try:
-        end = datetime.utcnow() - timedelta(minutes=
-            5)
-        
+        delay = timedelta(seconds=DELAY)
+        end = datetime.utcnow() - delay - timedelta(seconds=UPDATE_INTERVAL)
+                
         while True:
 
             start = end
-            end = datetime.utcnow()
+            end = datetime.utcnow() - delay
 
-            print "Querying metrics starting " + str(start.isoformat())
+            print "Querying metrics from " + str(start.isoformat())  + " to " + end.isoformat()
             
             metric_records = []
             metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
@@ -224,10 +228,10 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
                 print http_status, json.dumps(response)
 
 
-            duration = datetime.utcnow() - end
+            duration = datetime.utcnow() - delay - end
             sleep_time = max(UPDATE_INTERVAL - duration.seconds, 0)
             print "sleeping for " + str(sleep_time) + " seconds"    
-            if sleep_time > 0.0:  
+            if sleep_time > 0:  
                 time.sleep(sleep_time)
 
     except KeyboardInterrupt:
