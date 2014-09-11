@@ -86,8 +86,8 @@ AWS metrics i.e. CPUUtilization, DiskWriteOps, etc. The analysis is partitioned 
 `bucketSpan` is set to 300 seconds, which should be set to the same as the CloudWatch reporting interval.
 
     "analysisConfig" : {
-        "bucketSpan":' 300,
-        "detectors" : "function":"mean","fieldName":"Average","byFieldName":"metric_name","partitionFieldName":"instance"}] 
+        "bucketSpan": 300,
+        "detectors" : [{"function":"mean","fieldName":"Average","byFieldName":"metric_name","partitionFieldName":"instance"}] 
     }
 
 The job's dataDescription instructs the Engine that the data is in JSON format and how to parse the timestamp
