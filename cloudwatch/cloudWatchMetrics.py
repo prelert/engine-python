@@ -38,6 +38,9 @@ from CloudWatch until --end-date or the current time if --end-date is not
 set. Otherwise the script will run in an infinite loop pulling realtime
 data, use Ctrl-C to quit the realtime mode as the script will catch
 the interrupt and handle the exit gracefully.
+
+Only EC2 metrics are monitored and only those belonging to an instance.
+Aggregated metrics by instance type and AMI metrics are ignored. 
 '''
 
 import argparse
@@ -56,7 +59,7 @@ from prelert.engineApiClient import EngineApiClient
 # Prelert Engine API default connection prarams
 API_HOST = 'localhost'
 API_PORT = 8080
-ABI_BASE_URL = 'engine/v1'
+API_BASE_URL = 'engine/v1'
 
 ''' Interval between query new data from CloudWatch (seconds)'''
 UPDATE_INTERVAL=300
@@ -164,8 +167,10 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
         metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
         for m in metrics:
             instance = m.dimensions['InstanceId'][0]
+            if 'InstanceId' not in m.dimensions:
+                continue
 
-            datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
+            datapoints = m.query(start, end, 'Average', period=60)
             for dp in datapoints:
                 # annoyingly Boto does not return datetimes with a timezone
                 utc_time = dp['Timestamp'].replace(tzinfo=UTC())
@@ -206,7 +211,9 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
             
             metric_records = []
             metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-            for m in metrics:
+            for m in metrics:                
+                if 'InstanceId' not in m.dimensions:
+                    continue
                 instance = m.dimensions['InstanceId'][0]
 
                 datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
@@ -273,7 +280,7 @@ def main():
                  aws_secret_access_key=secret_key)
 
     # The Prelert REST API client
-    engine_client = EngineApiClient(args.api_host, ABI_BASE_URL, args.api_port)
+    engine_client = EngineApiClient(args.api_host, API_BASE_URL, args.api_port)
 
     # If no job ID is supplied create a new job
     job_id = args.job_id
