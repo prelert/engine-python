@@ -52,6 +52,7 @@ import time
 
 import boto.ec2
 import boto.ec2.cloudwatch
+from boto.exception import BotoServerError
 
 from prelert.engineApiClient import EngineApiClient
 
@@ -162,31 +163,36 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
             break
 
         print "Querying metrics starting at time " + str(start.isoformat())
-        
-        metric_records = []
-        metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-        for m in metrics:
-            instance = m.dimensions['InstanceId'][0]
-            if 'InstanceId' not in m.dimensions:
-                continue
 
-            datapoints = m.query(start, end, 'Average', period=60)
-            for dp in datapoints:
-                # annoyingly Boto does not return datetimes with a timezone
-                utc_time = dp['Timestamp'].replace(tzinfo=UTC())
-                mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
-                metric_records.append(mr)
+        try:   
+            metric_records = []
+            metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
+            for m in metrics:
+                instance = m.dimensions['InstanceId'][0]
+                if 'InstanceId' not in m.dimensions:
+                    continue
 
-        metric_records.sort(key=lambda r : r.timestamp)
+                datapoints = m.query(start, end, 'Average', period=60)
+                for dp in datapoints:
+                    # annoyingly Boto does not return datetimes with a timezone
+                    utc_time = dp['Timestamp'].replace(tzinfo=UTC())
+                    mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
+                    metric_records.append(mr)
 
-        data = ''
-        for mr in metric_records:
-            data += mr.toJsonStr() + '\n'
+            metric_records.sort(key=lambda r : r.timestamp)
 
-        (http_status, response) = engine_client.upload(job_id, data)
-        if http_status != 202:
-            print "Error uploading metric data to the Engine"
-            print http_status, json.dumps(response)
+            data = ''
+            for mr in metric_records:
+                data += mr.toJsonStr() + '\n'
+
+            (http_status, response) = engine_client.upload(job_id, data)
+            if http_status != 202:
+                print "Error uploading metric data to the Engine"
+                print http_status, json.dumps(response)
+
+        except BotoServerError as error:
+            print "Error querying CloudWatch"
+            print error
 
 
 
@@ -208,31 +214,36 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
             end = datetime.utcnow() - delay
 
             print "Querying metrics from " + str(start.isoformat())  + " to " + end.isoformat()
-            
-            metric_records = []
-            metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-            for m in metrics:                
-                if 'InstanceId' not in m.dimensions:
-                    continue
-                instance = m.dimensions['InstanceId'][0]
 
-                datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
-                for dp in datapoints:
-                    # annoyingly Boto does not return datetimes with a timezone
-                    utc_time = dp['Timestamp'].replace(tzinfo=UTC())                    
-                    mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
-                    metric_records.append(mr)
+            try:           
+                metric_records = []
+                metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
+                for m in metrics:                
+                    if 'InstanceId' not in m.dimensions:
+                        continue
+                    instance = m.dimensions['InstanceId'][0]
 
-            metric_records.sort(key=lambda r : r.timestamp)
+                    datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
+                    for dp in datapoints:
+                        # annoyingly Boto does not return datetimes with a timezone
+                        utc_time = dp['Timestamp'].replace(tzinfo=UTC())                    
+                        mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
+                        metric_records.append(mr)
 
-            data = ''
-            for mr in metric_records:
-                data += mr.toJsonStr() + '\n'
+                metric_records.sort(key=lambda r : r.timestamp)
 
-            (http_status, response) = engine_client.upload(job_id, data)
-            if http_status != 202:
-                print "Error uploading metric data to the Engine"
-                print http_status, json.dumps(response)
+                data = ''
+                for mr in metric_records:
+                    data += mr.toJsonStr() + '\n'
+
+                (http_status, response) = engine_client.upload(job_id, data)
+                if http_status != 202:
+                    print "Error uploading metric data to the Engine"
+                    print http_status, json.dumps(response)
+
+            except BotoServerError as error:
+                print "Error querying CloudWatch"
+                print error
 
 
             duration = datetime.utcnow() - delay - end
