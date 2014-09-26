@@ -565,7 +565,7 @@ class EngineApiClient:
 
         sort_arg = ''
         if sort_field:
-            sort_arg = "&sort=" + sort_field + '&desc=' + 'true' if sort_descending else 'false'
+            sort_arg = "&sort=" + sort_field + '&desc=' + ('true' if sort_descending else 'false')
 
         filter_arg = ''
         if normalized_probability_filter_value:
