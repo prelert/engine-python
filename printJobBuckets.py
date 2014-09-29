@@ -43,7 +43,7 @@ PORT = 8080
 BASE_URL = 'engine/v1'
 
 # time between polling for new results
-POLL_INTERVAL_SECS = 1.0
+POLL_INTERVAL_SECS = 10
 
 
 def setupLogging():
@@ -63,19 +63,19 @@ def parseArguments():
         "continue polling in real time for new results", dest="continue_poll")
     parser.add_argument("--anomalyScore", help="Filter out buckets with an anomalyScore "  
         + "less than this", type=float, default=0.0)
-    parser.add_argument("--unusualScore", help="Filter out buckets with an unusualScore "  
-        + "less than this", type=float, default=0.0)    
+    parser.add_argument("--normalizedProbability", help="Filter out buckets with an " 
+        + "max normalized probablilty less than this", type=float, default=0.0)    
     parser.add_argument("jobid", help="The jobId to request results from", default="0")
     return parser.parse_args()   
 
 
 def printHeader():
-    print "Date,Unusual Score,Anomaly Score"
+    print "Date,Anomaly Score,Max Normalized Probablility"
 
-def printRecords(records):
-    for record in records:
-        print "{0},{1},{2}".format(record['timestamp'], record['unusualScore'], 
-            record['anomalyScore'])
+def printBuckets(buckets):
+    for bucket in buckets:
+        print "{0},{1},{2}".format(bucket['timestamp'], bucket['anomalyScore'], 
+            bucket['maxNormalizedProbability'])
 
 def main():
 
@@ -90,8 +90,10 @@ def main():
     # Get all the buckets up to now
     logging.info("Get result buckets for job " + job_id)
     (http_status_code, response) = engine_client.getAllBuckets(job_id, 
-        include_records=False, anomalyScoreThreshold=args.anomalyScore,
-        unusualScoreThreshold=args.unusualScore)
+        include_records=False, 
+        anomaly_score_filter_value=args.anomalyScore,
+        normalized_probability_filter_value=args.normalizedProbability)
+
     
     if http_status_code != 200:
         print (http_status_code, json.dumps(response))
@@ -99,7 +101,7 @@ def main():
     
     
     printHeader()
-    printRecords(response)
+    printBuckets(response)
 
     if args.continue_poll:
 
@@ -114,14 +116,15 @@ def main():
 
             (http_status_code, response) = engine_client.getBucketsByDate(job_id=job_id, 
                 start_date=str(next_bucket_id), end_date=None, 
-                include_records=False, anomalyScoreThreshold=args.anomalyScore,
-                unusualScoreThreshold=args.unusualScore)
+                include_records=False,         
+                anomaly_score_filter_value=args.anomalyScore,
+                normalized_probability_filter_value=args.normalizedProbability)
 
             if http_status_code != 200:
                 print (http_status_code, json.dumps(response))
                 break
 
-            printRecords(response)
+            printBuckets(response)
             
             if len(response) > 0:
                 next_bucket_id = int(response[-1]['id']) + 1

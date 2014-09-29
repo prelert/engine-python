@@ -110,9 +110,10 @@ def main():
     if http_status_code != 200:
         print (http_status_code, json.dumps(response))
     else:
-        print "Date,Anomaly Score,Unusual Score"
+        print "Date,Anomaly Score,Max Normalized Probablility"
         for bucket in response:                                
-            print "{0},{1},{2}".format(bucket['timestamp'], bucket['anomalyScore'], bucket['unusualScore']) 
+            print "{0},{1},{2}".format(bucket['timestamp'], bucket['anomalyScore'], 
+                        bucket['maxNormalizedProbability'])
 
 
 if __name__ == "__main__":

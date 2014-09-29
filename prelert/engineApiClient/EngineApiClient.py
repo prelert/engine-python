@@ -372,13 +372,13 @@ class EngineApiClient:
             normalized_probability_filter_value=None, anomaly_score_filter_value=None):
 
         """
-        Return all the job's buckets results between 2 dates.  If more
-        than 1 page of buckets are available continue to with the next
-        page until all buckets have been read. An array of buckets is
+        Return all the job's buckets results between 2 dates.  If there is more
+        than one page of results for the given data range this function will
+        get them all appending the buckets in a list. A list of buckets is
         returned.
 
-        start_date, end_date Must either be an epoch time or ISO 8601 format
-        see the Prelert Engine API docs for help.
+        start_date, end_date Must either be an epoch time or ISO 8601 format 
+        strings see the Prelert Engine API docs for help.
         include_records Anomaly records are included in the buckets
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value

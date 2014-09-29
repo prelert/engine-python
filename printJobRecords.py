@@ -56,19 +56,19 @@ def parseArguments():
         + str(PORT), default=PORT)
     parser.add_argument("--anomalyScore", help="Filter out buckets with an anomalyScore "  
         + "less than this", type=float, default=0.0)
-    parser.add_argument("--unusualScore", help="Filter out buckets with an unusualScore "  
-        + "less than this", type=float, default=0.0)       
+    parser.add_argument("--normalizedProbability", help="Filter out buckets with an " 
+        + "max normalized probablilty less than this", type=float, default=0.0)         
     parser.add_argument("jobid", help="The jobId to request results from", default="0")
     return parser.parse_args()   
 
 
 def printHeader():
-    print "Date,Unusual Score,Anomaly Score"
+    print "Date,Anomaly Score,Normalized Probability"
 
 def printRecords(records):
     for record in records:
-        print "{0},{1},{2}".format(record['timestamp'], record['unusualScore'], 
-            record['anomalyScore'])
+        print "{0},{1},{2}".format(record['timestamp'], record['anomalyScore'], 
+            record['normalizedProbability'])
 
 
 def main():
@@ -87,7 +87,8 @@ def main():
     skip = 0
     take = 200
     (http_status_code, response) = engine_client.getRecords(job_id, skip, take,
-        anomalyScoreThreshold=args.anomalyScore, unusualScoreThreshold=args.unusualScore)
+                            normalized_probability_filter_value=args.normalizedProbability, 
+                            anomaly_score_filter_value=args.anomalyScore)        
     if http_status_code != 200:
         print (http_status_code, json.dumps(response))
         return
@@ -101,7 +102,9 @@ def main():
         skip += take
 
         (http_status_code, response) = engine_client.getRecords(job_id, skip, take,
-            anomalyScoreThreshold=args.anomalyScore, unusualScoreThreshold=args.unusualScore)
+                            normalized_probability_filter_value=args.normalizedProbability, 
+                            anomaly_score_filter_value=args.anomalyScore)        
+
         if http_status_code != 200:
             print (http_status_code, json.dumps(response))
             return
