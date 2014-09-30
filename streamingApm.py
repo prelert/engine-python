@@ -209,7 +209,7 @@ def main():
         # for the results
         next_bucket_id = 1
         print
-        print "Date,Anomaly Score,Max Normalized Probablility"
+        print "Date,Bucket ID,Anomaly Score,Max Normalized Probablility"
 
         for record in record_generator:
             # format as csv and append new line
@@ -240,8 +240,8 @@ def main():
 
                 # and print them
                 for bucket in response:
-                    print "{0},{1},{2}".format(bucket['timestamp'], bucket['anomalyScore'], 
-                        bucket['maxNormalizedProbability'])
+                    print "{0},{1},{2},{3}".format(bucket['timestamp'], bucket['id'], 
+                        bucket['anomalyScore'], bucket['maxNormalizedProbability'])
 
                 if len(response) > 0:
                     next_bucket_id = int(response[-1]['id']) + 1

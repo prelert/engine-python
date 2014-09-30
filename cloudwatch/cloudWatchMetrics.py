@@ -150,7 +150,10 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
     Query and analyze the CloudWatch metrics from start_date to end_date.
     If end_date == None then run until the time now. 
     '''    
-    end = start_date
+    
+    timezone = UTC()
+
+    end = start_date.replace(tzinfo=timezone)
     delta = timedelta(seconds=UPDATE_INTERVAL)
 
     while True:
@@ -175,7 +178,7 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
                 datapoints = m.query(start, end, 'Average', period=60)
                 for dp in datapoints:
                     # annoyingly Boto does not return datetimes with a timezone
-                    utc_time = dp['Timestamp'].replace(tzinfo=UTC())
+                    utc_time = dp['Timestamp'].replace(tzinfo=timezone)
                     mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
                     metric_records.append(mr)
 
@@ -205,13 +208,16 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
     keyboard interrupt (Ctrl C) and exit gracefully
     '''
     try:
+        timezone = UTC()
         delay = timedelta(seconds=DELAY)
         end = datetime.utcnow() - delay - timedelta(seconds=UPDATE_INTERVAL)
-                
+        end = end.replace(tzinfo=timezone)
+
         while True:
 
             start = end
             end = datetime.utcnow() - delay
+            end = end.replace(tzinfo=timezone)
 
             print "Querying metrics from " + str(start.isoformat())  + " to " + end.isoformat()
 
@@ -226,7 +232,7 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
                     datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
                     for dp in datapoints:
                         # annoyingly Boto does not return datetimes with a timezone
-                        utc_time = dp['Timestamp'].replace(tzinfo=UTC())                    
+                        utc_time = dp['Timestamp'].replace(tzinfo=timezone)                    
                         mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
                         metric_records.append(mr)
 
