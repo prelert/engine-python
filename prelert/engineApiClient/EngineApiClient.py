@@ -319,7 +319,7 @@ class EngineApiClient:
         '''
         Return a page of the job's buckets results.
         skip the first N buckets
-        take a maxium of this number of buckets
+        take a maximum of this number of buckets
         include_records Anomaly records are included in the buckets.
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
