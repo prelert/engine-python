@@ -53,7 +53,8 @@ ES_PORT = 9200
 # Prelert Engine API connection prarams
 API_HOST = 'localhost'
 API_PORT = 8080
-API_BASE_URL = 'engine/v0.3'
+ABI_BASE_URL = 'engine/v1'
+
 
 # The maximum number of documents to request from
 # Elasticsearch in each query
@@ -234,7 +235,11 @@ def main():
 
         print "Uploaded {0} records".format(str(doc_count))
         
-    engine_client.close(job_id)
+    (http_status, response) = engine_client.close(job_id)
+    if http_status != 202:
+        print "Error closing job"
+        print http_status, json.dumps(response)
+        return
     print "{0} records successfully written to job {1}".format(str(doc_count), job_id)
 
 

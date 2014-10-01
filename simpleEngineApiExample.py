@@ -24,9 +24,9 @@ The example file used can be downloaded from
 http://s3.amazonaws.com/prelert_demo/farequote.csv and looks like this:
 
     time,airline,responsetime,sourcetype
-    2013-01-28 00:00:00Z,AAL,132.2046,farequote
-    2013-01-28 00:00:00Z,JZA,990.4628,farequote
-    2013-01-28 00:00:00Z,JBU,877.5927,farequote
+    2014-06-23 00:00:00Z,AAL,132.2046,farequote
+    2014-06-23 00:00:00Z,JZA,990.4628,farequote
+    2014-06-23 00:00:00Z,JBU,877.5927,farequote
 
 The script is invoked with 1 positional argument the farequote.csv 
 file and has optional arguments to specify the location of the 
@@ -49,7 +49,7 @@ from prelert.engineApiClient import EngineApiClient
 # Prelert Engine API connection prarams
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v0.3'
+BASE_URL = 'engine/v1'
 
 
 def setupLogging():
@@ -80,7 +80,7 @@ def main():
 
     job_config = '{"analysisConfig" : {\
                         "bucketSpan":3600,\
-                        "detectors" :[{"fieldName":"responsetime","byFieldName":"airline"}] },\
+                        "detectors" :[{"function":"metric","fieldName":"responsetime","byFieldName":"airline"}] },\
                         "dataDescription" : {"fieldDelimiter":",", "timeField":"time", "timeFormat":"yyyy-MM-dd HH:mm:ssX"} }'
 
     logging.info("Creating job")
@@ -110,9 +110,10 @@ def main():
     if http_status_code != 200:
         print (http_status_code, json.dumps(response))
     else:
-        print "Date,AnomalyScore"
+        print "Date,Anomaly Score,Max Normalized Probablility"
         for bucket in response:                                
-            print "{0},{1}".format(bucket['timestamp'], bucket['anomalyScore']) 
+            print "{0},{1},{2}".format(bucket['timestamp'], bucket['anomalyScore'], 
+                        bucket['maxNormalizedProbability'])
 
 
 if __name__ == "__main__":

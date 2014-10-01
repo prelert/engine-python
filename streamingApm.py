@@ -49,7 +49,7 @@ from prelert.engineApiClient import EngineApiClient
 # Default connection prarams
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v0.3'
+BASE_URL = 'engine/v1'
 
 ZERO_OFFSET = timedelta(0)
 
@@ -129,6 +129,7 @@ def generateRecords(csv_filename, start_date, interval, end_date):
                         break
 
                 csv_file.close()
+
             else:
                 if reverse:
                     for row in reversed(csv_data):
@@ -158,7 +159,7 @@ def main():
     args = parseArguments()
 
 
-    start_date = datetime(2011, 05, 15, 0, 0, 0, 0, UtcOffset())    
+    start_date = datetime(2014, 05, 18, 0, 0, 0, 0, UtcOffset())    
     # interval between the generated timestamps for the records
     interval = timedelta(seconds=300)
 
@@ -168,7 +169,6 @@ def main():
     else:
         duration = timedelta(hours=args.duration)
         end_date = start_date + duration
-
 
 
     job_config = '{"analysisConfig" : {\
@@ -196,6 +196,7 @@ def main():
 
     job_id = response['id']
     print 'Job created with Id = ' + job_id
+    print args.file
 
     # get the csv header (the first record generated)
     record_generator = generateRecords(args.file, start_date, interval, end_date)    
@@ -208,7 +209,7 @@ def main():
         # for the results
         next_bucket_id = 1
         print
-        print "Date,BucketId,AnomalyScore"
+        print "Date,Bucket ID,Anomaly Score,Max Normalized Probablility"
 
         for record in record_generator:
             # format as csv and append new line
@@ -239,7 +240,8 @@ def main():
 
                 # and print them
                 for bucket in response:
-                    print "{0},{1},{2}".format(bucket['timestamp'], bucket['id'], bucket['anomalyScore'])
+                    print "{0},{1},{2},{3}".format(bucket['timestamp'], bucket['id'], 
+                        bucket['anomalyScore'], bucket['maxNormalizedProbability'])
 
                 if len(response) > 0:
                     next_bucket_id = int(response[-1]['id']) + 1
