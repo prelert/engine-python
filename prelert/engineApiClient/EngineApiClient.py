@@ -20,6 +20,7 @@ A simple HTTP client to the Prelert Engine REST API
 """
 
 import httplib
+import urllib
 import json
 import logging
 
@@ -398,11 +399,11 @@ class EngineApiClient:
 
         start_arg = ''
         if start_date:
-            start_arg = '&start=' + start_date
+            start_arg = '&start=' + urllib.quote(start_date)
 
         end_arg = ''
         if end_date:
-            end_arg = '&end=' + end_date
+            end_arg = '&end=' + urllib.quote(end_date)
 
         score_filter = ''
         if normalized_probability_filter_value:
@@ -557,15 +558,15 @@ class EngineApiClient:
 
         start_arg = ''
         if start_date:
-            start_arg = '&start=' + start_date
+            start_arg = '&start=' + urllib.quote(start_date)
 
         end_arg = ''
         if end_date:
-            end_arg = '&end=' + end_date
+            end_arg = '&end=' + urllib.quote(end_date)
 
         sort_arg = ''
         if sort_field:
-            sort_arg = "&sort=" + sort_field + '&desc=' + ('true' if sort_descending else 'false')
+            sort_arg = "&sort=" + urllib.quote(sort_field) + '&desc=' + ('true' if sort_descending else 'false')
 
         filter_arg = ''
         if normalized_probability_filter_value:
