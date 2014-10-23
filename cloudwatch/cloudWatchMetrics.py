@@ -151,9 +151,7 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
     If end_date == None then run until the time now. 
     '''    
     
-    timezone = UTC()
-
-    end = start_date.replace(tzinfo=timezone)
+    end = start_date
     delta = timedelta(seconds=UPDATE_INTERVAL)
 
     while True:
@@ -178,7 +176,7 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
                 datapoints = m.query(start, end, 'Average', period=60)
                 for dp in datapoints:
                     # annoyingly Boto does not return datetimes with a timezone
-                    utc_time = dp['Timestamp'].replace(tzinfo=timezone)
+                    utc_time = replaceTimezoneWithUtc(dp['Timestamp'])
                     mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
                     metric_records.append(mr)
 
@@ -208,16 +206,15 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
     keyboard interrupt (Ctrl C) and exit gracefully
     '''
     try:
-        timezone = UTC()
         delay = timedelta(seconds=DELAY)
         end = datetime.utcnow() - delay - timedelta(seconds=UPDATE_INTERVAL)
-        end = end.replace(tzinfo=timezone)
+        end = replaceTimezoneWithUtc(end)
 
         while True:
 
             start = end
             end = datetime.utcnow() - delay
-            end = end.replace(tzinfo=timezone)
+            end = replaceTimezoneWithUtc(end)
 
             print "Querying metrics from " + str(start.isoformat())  + " to " + end.isoformat()
 
@@ -232,7 +229,7 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
                     datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
                     for dp in datapoints:
                         # annoyingly Boto does not return datetimes with a timezone
-                        utc_time = dp['Timestamp'].replace(tzinfo=timezone)                    
+                        utc_time = replaceTimezoneWithUtc(dp['Timestamp'])
                         mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
                         metric_records.append(mr)
 
@@ -318,6 +315,7 @@ def main():
     start_date = None
     if args.start_date != None:
         start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
+        start_date = replaceTimezoneWithUtc(start_date)
 
     if start_date == None:
         runRealtime(job_id, cloudwatch_conn, engine_client)
@@ -326,6 +324,7 @@ def main():
         end_date = None
         if args.end_date != None:
             end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
+            end_date = replaceTimezoneWithUtc(end_date)
 
         runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client)
 
@@ -333,6 +332,8 @@ def main():
     print "Closing job..."
     engine_client.close(job_id)
 
+def replaceTimezoneWithUtc(date):
+    return date.replace(tzinfo=UTC())
 
 if __name__ == "__main__":
     main()   
