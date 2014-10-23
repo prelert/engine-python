@@ -169,9 +169,9 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
             metric_records = []
             metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
             for m in metrics:
-                instance = m.dimensions['InstanceId'][0]
                 if 'InstanceId' not in m.dimensions:
                     continue
+                instance = m.dimensions['InstanceId'][0]
 
                 datapoints = m.query(start, end, 'Average', period=60)
                 for dp in datapoints:
