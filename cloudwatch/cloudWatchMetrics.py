@@ -71,6 +71,13 @@ REPORTING_INTERVAL=60
 ''' In realtime mode run this many seconds behind realtime '''
 DELAY=600
 
+'''
+CloudWatch imposes a limit to the number of data points a query can return.
+The limit is currently 1440, allowing e.g. a daily query with a reporting interval
+of one minute (a day has 1440 minutes).
+'''
+MAX_DATAPOINTS_PER_QUERY = 1440
+
 ''' 
     Prelert Engine job configuration.
     The detector is configured to analyze the mean of the field named 
@@ -155,15 +162,17 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
     '''    
     
     end = start_date
-    delta = timedelta(seconds=UPDATE_INTERVAL)
+    delta = calculateIntervalBetweenQueries(REPORTING_INTERVAL)
 
     while True:
 
+        end_condition = end_date if end_date != None else datetime.utcnow()
         start = end
         end = start + delta
+        if (end > end_condition):
+            end = end_condition
 
-        end_condition = end_date if end_date != None else datetime.utcnow()
-        if end > end_condition:
+        if start == end:
             break
 
         print "Querying metrics starting at time " + str(start.isoformat())
@@ -184,6 +193,18 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
         except BotoServerError as error:
             print "Error querying CloudWatch"
             print error
+
+
+def calculateIntervalBetweenQueries(reporting_interval):
+    '''
+    For querying historic data, we can improve the performance by
+    minimising the number of queries we fire against CloudWatch.
+    CloudWatch allows a query spanning a day given the reporting
+    interval is a minute. Thus, we return the product of a day's
+    interval with the reporting interval in minutes.
+    '''
+    return timedelta(seconds = MAX_DATAPOINTS_PER_QUERY * reporting_interval)
+
 
 def queryMetricRecords(metrics, start, end, reporting_interval):
     metric_records = []
