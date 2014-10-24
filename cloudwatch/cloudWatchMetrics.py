@@ -165,22 +165,9 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
 
         print "Querying metrics starting at time " + str(start.isoformat())
 
-        try:   
-            metric_records = []
+        try:
             metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-            for m in metrics:
-                if 'InstanceId' not in m.dimensions:
-                    continue
-                instance = m.dimensions['InstanceId'][0]
-
-                datapoints = m.query(start, end, 'Average', period=60)
-                for dp in datapoints:
-                    # annoyingly Boto does not return datetimes with a timezone
-                    utc_time = replaceTimezoneWithUtc(dp['Timestamp'])
-                    mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
-                    metric_records.append(mr)
-
-            metric_records.sort(key=lambda r : r.timestamp)
+            metric_records = queryMetricRecords(metrics, start, end, reporting_interval = 60)
 
             data = ''
             for mr in metric_records:
@@ -195,6 +182,23 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
             print "Error querying CloudWatch"
             print error
 
+def queryMetricRecords(metrics, start, end, reporting_interval):
+    metric_records = []
+    for m in metrics:
+        if 'InstanceId' not in m.dimensions:
+            continue
+        instance = m.dimensions['InstanceId'][0]
+
+        datapoints = m.query(start, end, 'Average', period=reporting_interval)
+        for dp in datapoints:
+            # annoyingly Boto does not return datetimes with a timezone
+            utc_time = replaceTimezoneWithUtc(dp['Timestamp'])
+            mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
+            metric_records.append(mr)
+
+        metric_records.sort(key=lambda r : r.timestamp)
+
+    return metric_records
 
 
 def runRealtime(job_id, cloudwatch_conn, engine_client):
@@ -219,21 +223,8 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
             print "Querying metrics from " + str(start.isoformat())  + " to " + end.isoformat()
 
             try:           
-                metric_records = []
                 metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-                for m in metrics:                
-                    if 'InstanceId' not in m.dimensions:
-                        continue
-                    instance = m.dimensions['InstanceId'][0]
-
-                    datapoints = m.query(start, end, 'Average', period=UPDATE_INTERVAL)
-                    for dp in datapoints:
-                        # annoyingly Boto does not return datetimes with a timezone
-                        utc_time = replaceTimezoneWithUtc(dp['Timestamp'])
-                        mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
-                        metric_records.append(mr)
-
-                metric_records.sort(key=lambda r : r.timestamp)
+                metric_records = queryMetricRecords(metrics, start, end, reporting_interval = UPDATE_INTERVAL)
 
                 data = ''
                 for mr in metric_records:
