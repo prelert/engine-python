@@ -65,6 +65,9 @@ API_BASE_URL = 'engine/v1'
 ''' Interval between query new data from CloudWatch (seconds)'''
 UPDATE_INTERVAL=300
 
+''' Interval between data points that are being fetched from CloudWatch (seconds)'''
+REPORTING_INTERVAL=60
+
 ''' In realtime mode run this many seconds behind realtime '''
 DELAY=600
 
@@ -167,7 +170,7 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
 
         try:
             metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-            metric_records = queryMetricRecords(metrics, start, end, reporting_interval = 60)
+            metric_records = queryMetricRecords(metrics, start, end, reporting_interval = REPORTING_INTERVAL)
 
             data = ''
             for mr in metric_records:
@@ -224,7 +227,7 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
 
             try:           
                 metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
-                metric_records = queryMetricRecords(metrics, start, end, reporting_interval = UPDATE_INTERVAL)
+                metric_records = queryMetricRecords(metrics, start, end, reporting_interval = REPORTING_INTERVAL)
 
                 data = ''
                 for mr in metric_records:
