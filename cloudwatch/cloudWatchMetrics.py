@@ -166,7 +166,7 @@ def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
 
     while True:
 
-        end_condition = end_date if end_date != None else datetime.utcnow()
+        end_condition = end_date if end_date != None else replaceTimezoneWithUtc(datetime.utcnow())
         start = end
         end = start + delta
         if (end > end_condition):
