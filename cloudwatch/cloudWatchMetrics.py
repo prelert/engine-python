@@ -219,8 +219,8 @@ def queryMetricRecords(metrics, start, end, reporting_interval):
             mr = MetricRecord(utc_time, instance, m.name, dp['Average'])
             metric_records.append(mr)
 
-        metric_records.sort(key=lambda r : r.timestamp)
 
+    metric_records.sort(key=lambda r : r.timestamp)
     return metric_records
 
 
