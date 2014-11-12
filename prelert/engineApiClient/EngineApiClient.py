@@ -647,7 +647,6 @@ class EngineApiClient:
 
         if response.status != 200:
             logging.error("Subscribe alerts response = " + str(response.status))
-            logging.error(data)
         else:
             logging.debug("Subscribe alerts response = " + str(response.status))
 
