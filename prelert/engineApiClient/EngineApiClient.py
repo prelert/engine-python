@@ -286,11 +286,9 @@ class EngineApiClient:
         returned
         '''
 
-        query_char = '?'
         query = ''
         if include_records:
             query = '?expand=true'
-            query_char = '&'
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/{1}{2}".format(job_id, bucket_id, query)
@@ -325,7 +323,7 @@ class EngineApiClient:
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value   
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -335,12 +333,12 @@ class EngineApiClient:
         query = ''
         if include_records:
             query = '&expand=true'
-        
+
         if normalized_probability_filter_value:
             query += '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
-            query += '&anomalyScore=' + str(anomaly_score_filter_value)  
+            query += '&anomalyScore=' + str(anomaly_score_filter_value)
 
 
 
@@ -378,13 +376,13 @@ class EngineApiClient:
         get them all appending the buckets in a list. A list of buckets is
         returned.
 
-        start_date, end_date Must either be an epoch time or ISO 8601 format 
+        start_date, end_date Must either be an epoch time or ISO 8601 format
         strings see the Prelert Engine API docs for help.
         include_records Anomaly records are included in the buckets
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value   
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -410,7 +408,7 @@ class EngineApiClient:
             score_filter = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
-            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)  
+            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}".format(job_id,
@@ -465,7 +463,7 @@ class EngineApiClient:
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value       
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) tuple
@@ -483,7 +481,7 @@ class EngineApiClient:
             score_filter = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
-            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)    
+            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}".format(
@@ -547,7 +545,7 @@ class EngineApiClient:
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value    
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, records) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -599,6 +597,65 @@ class EngineApiClient:
         self.connection.close()
 
         return (response.status, msg)
+
+
+    def alerts_longpoll(self, job_id, normalized_probability_threshold=None,
+        anomaly_score_threshold=None, timeout=None):
+        """
+        Subscribe to the long poll alerts endpoint. Alerts are fired when
+        a bucket has an anomaly score >= anomaly_score_threshold or the
+        bucket has records with normalised probability >=
+        normalized_probability_threshold.
+
+        Returns a (http_status_code, alert) tuple if successful else
+        if http_status_code != 200 a (http_status_code, error_doc) is
+        returned
+
+        If the long poll times out an alert object is returned but the
+        'timeout' field will be set true.
+        """
+
+        query_char = '?'
+
+        prob_arg = ''
+        if normalized_probability_threshold:
+            prob_arg = query_char + 'probability=' + str(normalized_probability_threshold)
+            query_char = '&'
+
+        score_arg = ''
+        if anomaly_score_threshold:
+            score_arg = query_char + 'score=' + str(anomaly_score_threshold)
+            query_char = '&'
+
+        timeout_arg = ''
+        if timeout:
+            timeout_arg = query_char + 'timeout=' + str(timeout)
+
+        url = self.base_url + "/alerts_longpoll/{0}/{1}{2}{3}".format(
+            job_id, prob_arg, score_arg, timeout_arg)
+
+        self.connection.connect()
+        self.connection.request("GET", url)
+        response = self.connection.getresponse();
+
+        # read all of the response
+        data = response.read()
+        if data:
+            msg = json.loads(data)
+        else:
+            msg = dict()
+
+        if response.status != 200:
+            logging.error("Subscribe alerts response = " + str(response.status))
+            logging.error(data)
+        else:
+            logging.debug("Subscribe alerts response = " + str(response.status))
+
+        self.connection.close()
+
+        return (response.status, msg)
+
+
 
 
     def delete(self, job_id):
