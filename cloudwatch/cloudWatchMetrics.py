@@ -18,13 +18,13 @@
 ############################################################################
 
 '''
-Script to pull metric data from AWS CloudWatch and analyze it in 
-the Prelert Engine API. There are 2 modes of operation: historical 
-where stored metric data is extracted between 2 dates and a continous 
-realtime mode where the preceeding few minutes of data is queried in 
+Script to pull metric data from AWS CloudWatch and analyze it in
+the Prelert Engine API. There are 2 modes of operation: historical
+where stored metric data is extracted between 2 dates and a continous
+realtime mode where the preceeding few minutes of data is queried in
 a loop.
 
-The path to a configuration file containing the AWS connection parameters 
+The path to a configuration file containing the AWS connection parameters
 must be passed to the script the file should have the following propteries:
 
     region=REGION
@@ -40,7 +40,12 @@ data, use Ctrl-C to quit the realtime mode as the script will catch
 the interrupt and handle the exit gracefully.
 
 Only EC2 metrics are monitored and only those belonging to an instance.
-Aggregated metrics by instance type and AMI metrics are ignored. 
+Aggregated metrics by instance type and AMI metrics are ignored.
+
+Usage
+    python cloudWatchMetrics.py awskey.conf
+
+    python cloudWatchMetrics.py --start-date=2014-10-01 awskey.conf
 '''
 
 import argparse
@@ -78,10 +83,10 @@ of one minute (a day has 1440 minutes).
 '''
 MAX_DATAPOINTS_PER_QUERY = 1440
 
-''' 
+'''
     Prelert Engine job configuration.
-    The detector is configured to analyze the mean of the field named 
-    'Average' by the field 'metric_name' where the value of 'metric_name' 
+    The detector is configured to analyze the mean of the field named
+    'Average' by the field 'metric_name' where the value of 'metric_name'
     is one of the AWS metrics e.g. CPUUtilization, DiskWriteOps, etc.
     The analysis is partition by AWS instance ID.
     bucketSpan is set the same as the CloudWatch reporting interval.
@@ -90,7 +95,8 @@ JOB_CONFIG = '{"analysisConfig" : {\
                     "bucketSpan":' + str(UPDATE_INTERVAL) + ',\
                     "detectors" :[{"function":"mean","fieldName":"Average","byFieldName":"metric_name","partitionFieldName":"instance"}] \
                 },\
-                "dataDescription" : {"format":"JSON","timeField":"timestamp","timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"} \
+                "dataDescription" : {"format":"JSON","timeField":"timestamp","timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"\
+                }\
             }'
 
 
@@ -98,7 +104,7 @@ JOB_CONFIG = '{"analysisConfig" : {\
 class MetricRecord:
     '''
     Simple holder class for the CloudWatch metrics.
-    toJsonStr returns the metric in a format for the job 
+    toJsonStr returns the metric in a format for the job
     configuration above.
     '''
     def __init__(self, timestamp, instance, metric_name, metric_value):
@@ -116,18 +122,18 @@ class MetricRecord:
 
 
 class UTC(tzinfo):
-    '''
-    UTC timezone class
-    '''
- 
+    ''' UTC timezone class '''
     def utcoffset(self, dt):
         return timedelta(0)
- 
+
     def tzname(self, dt):
         return "UTC"
- 
+
     def dst(self, dt):
         return timedelta(0)
+
+def replaceTimezoneWithUtc(date):
+    return date.replace(tzinfo=UTC())
 
 
 def parseArguments():
@@ -136,20 +142,20 @@ def parseArguments():
     parser.add_argument("config", help="The AWS connection parameters.")
 
     parser.add_argument("--api-host", help="The Prelert Engine API host, defaults to "
-        + API_HOST, default=API_HOST, dest="api_host")    
-    parser.add_argument("--api-port", help="The Prelert Engine API port, defaults to " 
+        + API_HOST, default=API_HOST, dest="api_host")
+    parser.add_argument("--api-port", help="The Prelert Engine API port, defaults to "
         + str(API_PORT), default=API_PORT, dest="api_port")
 
     parser.add_argument("--job-id", help="Send data to this job. If not set a \
-        new job will be created.", default=None, dest="job_id")        
+        new job will be created.", default=None, dest="job_id")
 
     parser.add_argument("--start-date", help="Request data from this date. If not \
-        set then run in realtime mode. Dates must be in YYYY-MM-DD format", 
+        set then run in realtime mode. Dates must be in YYYY-MM-DD format",
         default=None, dest="start_date")
     parser.add_argument("--end-date", help="if --start-date is set then pull \
         and analyze only the metric data between those dates. \
         If --start-date is not set this argument has no meaning. \
-        Dates must be in YYYY-MM-DD format", 
+        Dates must be in YYYY-MM-DD format",
         default=None, dest="end_date")
 
     return parser.parse_args()
@@ -158,9 +164,9 @@ def parseArguments():
 def runHistorical(job_id, start_date, end_date, cloudwatch_conn, engine_client):
     '''
     Query and analyze the CloudWatch metrics from start_date to end_date.
-    If end_date == None then run until the time now. 
-    '''    
-    
+    If end_date == None then run until the time now.
+    '''
+
     end = start_date
     delta = calculateIntervalBetweenQueries(REPORTING_INTERVAL)
 
@@ -229,7 +235,7 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
     Query the previous 5 minutes of metric data every 5 minutes
     then upload to the Prelert Engine.
 
-    This function runs in an infinite loop but will catch the 
+    This function runs in an infinite loop but will catch the
     keyboard interrupt (Ctrl C) and exit gracefully
     '''
     try:
@@ -245,7 +251,7 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
 
             print "Querying metrics from " + str(start.isoformat())  + " to " + end.isoformat()
 
-            try:           
+            try:
                 metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
                 metric_records = queryMetricRecords(metrics, start, end, reporting_interval = REPORTING_INTERVAL)
 
@@ -262,11 +268,12 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
                 print "Error querying CloudWatch"
                 print error
 
-
-            duration = datetime.utcnow() - delay - end
+            now = datetime.utcnow()
+            now = replaceTimezoneWithUtc(now)
+            duration = now - delay - end
             sleep_time = max(UPDATE_INTERVAL - duration.seconds, 0)
-            print "sleeping for " + str(sleep_time) + " seconds"    
-            if sleep_time > 0:  
+            print "sleeping for " + str(sleep_time) + " seconds"
+            if sleep_time > 0:
                 time.sleep(sleep_time)
 
     except KeyboardInterrupt:
@@ -319,8 +326,8 @@ def main():
             print response
             return
 
-        job_id = response['id']  
-        print "Created job with ID " + str(job_id)    
+        job_id = response['id']
+        print "Created job with ID " + str(job_id)
     else:
         print "Using job ID " + job_id
 
@@ -346,8 +353,5 @@ def main():
     print "Closing job..."
     engine_client.close(job_id)
 
-def replaceTimezoneWithUtc(date):
-    return date.replace(tzinfo=UTC())
-
 if __name__ == "__main__":
-    main()   
+    main()
