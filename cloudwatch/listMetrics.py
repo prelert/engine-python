@@ -44,6 +44,9 @@ import boto.ec2.cloudwatch
 def parseArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("config", help="The AWS connection parameters.")
+    parser.add_argument("--service", choices=["EC2", "EBS"],
+            default="EC2", dest="service",
+            help="The AWS service for which metrics will be listed. By default it is EC2.")
 
     return parser.parse_args()
 
@@ -81,7 +84,7 @@ def main():
 
 
     #metrics = cloudwatch_conn.list_metrics()
-    metrics = cloudwatch_conn.list_metrics(namespace='AWS/EC2')
+    metrics = cloudwatch_conn.list_metrics(namespace='AWS/' + args.service)
     for m in metrics:
          print m.name, m.namespace, m.dimensions
 

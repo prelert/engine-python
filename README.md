@@ -87,7 +87,7 @@ separated by ',' and there is a field 'time' containing a timestamp in the Java 
 'yyyy-MM-dd HH:mm:ssX'.
 
 Here's an example of the data:
-> time,airline,responsetime,sourcetype
+> time,airline,responsetime,sourcetype  
 > 2013-01-28 00:00:00Z,AAL,132.2046,farequote  
 > 2013-01-28 00:00:00Z,JZA,990.4628,farequote  
 > 2013-01-28 00:00:00Z,JBU,877.5927,farequote  
