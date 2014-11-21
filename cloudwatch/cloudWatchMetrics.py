@@ -412,6 +412,10 @@ def main():
                  aws_access_key_id=access_id,
                  aws_secret_access_key=secret_key)
 
+    if cloudwatch_conn == None:
+        print "Error unknown region " + region
+        return
+
     # The Prelert REST API client
     engine_client = EngineApiClient(args.api_host, API_BASE_URL, args.api_port)
 
