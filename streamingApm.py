@@ -17,19 +17,19 @@
 #                                                                          #
 ############################################################################
 '''
-This script creates a new job and uploads to it APM data records 
-generated from existing data in a CSV file. New records will created 
+This script creates a new job and uploads to it APM data records
+generated from existing data in a CSV file. New records will created
 indefinitely or until the 'duration' argument expires. Each record has
-a new timestamp so this script can be used to repeatedly replay the 
+a new timestamp so this script can be used to repeatedly replay the
 historical data. After each upload of data the script requests any new
 bucket results and prints them.
 
-The script is invoked with 1 positional argument -the CSV file containing 
+The script is invoked with 1 positional argument -the CSV file containing
 APM to use a the source of the generated data- and optional arguments
 to specify the location of the Engine API. Run the script with '--help'
 to see the options.
 
-The file used in the online example can be downloaded from 
+The file used in the online example can be downloaded from
 http://s3.amazonaws.com/prelert_demo/network.csv
 
 If no 'duration' is set the script will run indefinitely cse Ctrl-C to
@@ -71,15 +71,15 @@ class UtcOffset(tzinfo):
 def parseArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", help="The Prelert Engine API host, defaults to "
-        + HOST, default=HOST)    
-    parser.add_argument("--port", help="The Prelert Engine API port, defaults to " 
+        + HOST, default=HOST)
+    parser.add_argument("--port", help="The Prelert Engine API port, defaults to "
         + str(PORT), default=PORT)
     parser.add_argument("--duration", help="The number of hours to generate \
         data for. If not set script will produce records from the historical \
         start date until the time now", type=int, default=0)
     parser.add_argument("file", help="Path to APM data")
 
-    return parser.parse_args()   
+    return parser.parse_args()
 
 
 def generateRecords(csv_filename, start_date, interval, end_date):
@@ -88,7 +88,7 @@ def generateRecords(csv_filename, start_date, interval, end_date):
     with an updated timestamp on demand.
 
     Records are read from a file and stored in a local array, once
-    all the records have been read the function does not loop 
+    all the records have been read the function does not loop
     round to the beginning again instead it flips and outputs
     the records in reverse order and so on.
 
@@ -99,22 +99,22 @@ def generateRecords(csv_filename, start_date, interval, end_date):
     csv_file = open(csv_filename, 'rb')
     reader = csv.reader(csv_file)
     header = reader.next()
-            
+
     time_field_idx = -1
     for i in range(len(header)):
         if header[i] == 'time':
             time_field_idx = i
-            break    
+            break
 
     if time_field_idx == -1:
         logging.error("Cannot find 'time' field in csv header")
-        return 
+        return
 
     reverse = False
-    while start_date < end_date:          
+    while start_date < end_date:
         try:
             yield header
-           
+
             if len(csv_data) == 0:
                 # populate csv_data record
                 for row in reader:
@@ -122,7 +122,6 @@ def generateRecords(csv_filename, start_date, interval, end_date):
                     start_date += interval
 
                     csv_data.append(row)
-
                     yield row
 
                     if start_date > end_date:
@@ -146,12 +145,12 @@ def generateRecords(csv_filename, start_date, interval, end_date):
                         yield row
 
                         if start_date > end_date:
-                            break                
+                            break
 
             reverse = not reverse
 
         except KeyboardInterrupt:
-            raise StopIteration    
+            raise StopIteration
 
 
 
@@ -159,7 +158,7 @@ def main():
     args = parseArguments()
 
 
-    start_date = datetime(2014, 05, 18, 0, 0, 0, 0, UtcOffset())    
+    start_date = datetime(2014, 05, 18, 0, 0, 0, 0, UtcOffset())
     # interval between the generated timestamps for the records
     interval = timedelta(seconds=300)
 
@@ -171,7 +170,8 @@ def main():
         end_date = start_date + duration
 
 
-    job_config = '{"analysisConfig" : {\
+    job_config = '{\
+        "analysisConfig" : {\
             "bucketSpan":3600,\
             "detectors" :[\
                 {"fieldName":"In Discards","byFieldName":"host"},\
@@ -186,53 +186,57 @@ def main():
             "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"\
         }\
     }'
-    
+
 
     engine_client = EngineApiClient(args.host, BASE_URL, args.port)
     (http_status_code, response) = engine_client.createJob(job_config)
-    if http_status_code != 201:        
+    if http_status_code != 201:
         print (http_status_code, json.dumps(response))
         return
 
     job_id = response['id']
     print 'Job created with Id = ' + job_id
-    print args.file
 
     # get the csv header (the first record generated)
-    record_generator = generateRecords(args.file, start_date, interval, end_date)    
+    record_generator = generateRecords(args.file, start_date, interval, end_date)
     header = ','.join(next(record_generator))
     header += '\n'
 
     count = 0
-    data = header
     try:
         # for the results
         next_bucket_id = 1
         print
         print "Date,Bucket ID,Anomaly Score,Max Normalized Probablility"
 
+        (http_status_code, response) = engine_client.upload(job_id, header)
+        if http_status_code != 202:
+            print (http_status_code, json.dumps(response))
+            return
+
+        data = header
         for record in record_generator:
             # format as csv and append new line
             csv = ','.join(record) + '\n'
-            data += csv 
+            data += csv
             # print data
 
             count += 1
-            if count == 100:            
+            if count == 100:
                 (http_status_code, response) = engine_client.upload(job_id, data)
-                if http_status_code != 202:                    
+                if http_status_code != 202:
                     print (http_status_code, json.dumps(response))
-                    break                    
+                    break
 
                 # commit the uploaded data, when this returns the data
                 # has been analyzed and the results are available.
-                (http_status_code, response) = engine_client.close(job_id)
-                if http_status_code != 202:                    
-                    print (http_status_code, json.dumps(response))
-                    break  
+                # (http_status_code, response) = engine_client.close(job_id)
+                # if http_status_code != 202:
+                #     print (http_status_code, json.dumps(response))
+                #     break
 
                 # get the latest results...
-                (http_status_code, response) = engine_client.getBucketsByDate(job_id=job_id, 
+                (http_status_code, response) = engine_client.getBucketsByDate(job_id=job_id,
                     start_date=str(next_bucket_id), end_date=None)
                 if http_status_code != 200:
                     print (http_status_code, json.dumps(response))
@@ -240,13 +244,13 @@ def main():
 
                 # and print them
                 for bucket in response:
-                    print "{0},{1},{2},{3}".format(bucket['timestamp'], bucket['id'], 
+                    print "{0},{1},{2},{3}".format(bucket['timestamp'], bucket['id'],
                         bucket['anomalyScore'], bucket['maxNormalizedProbability'])
 
                 if len(response) > 0:
                     next_bucket_id = int(response[-1]['id']) + 1
 
-                # must send the header every time    
+                # must send the header every time
                 data = header
                 count = 0
 
@@ -255,12 +259,12 @@ def main():
 
     except KeyboardInterrupt:
         print "Keyboard interrupt closing job..."
-                
+
     (http_status_code, response) = engine_client.close(job_id)
-    if http_status_code != 202:                    
+    if http_status_code != 202:
         print (http_status_code, json.dumps(response))
 
 
 if __name__ == "__main__":
-    main()    
+    main()
 
