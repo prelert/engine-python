@@ -137,7 +137,6 @@ class EngineApiClient:
         else:
             doc = dict()
 
-
         self.connection.close()
 
         return (response.status, doc)
@@ -164,16 +163,19 @@ class EngineApiClient:
         if response.status != 202:
             logging.error("Upload file response = " + str(response.status)
                 + " " + response.reason)
-            data = json.load(response)
         else:
             logging.debug("Upload response = " + str(response.status))
-            data = dict()
-            # read all of the response before another request can be made
-            response.read()
+
+        # read all of the response before another request can be made
+        data = response.read()
+        if data:
+            doc = json.loads(data)
+        else:
+            doc = dict()
 
         self.connection.close()
 
-        return (response.status, data)
+        return (response.status, doc)
 
 
     def stream(self, job_id, data, gzipped=False):
@@ -234,16 +236,20 @@ class EngineApiClient:
         if response.status != 202:
             logging.error("Upload file response = " + str(response.status)
                 + " " + response.reason)
-            data = json.load(response)
         else:
             logging.debug("Upload response = " + str(response.status))
-            data = dict()
-            # read all of the response before another request can be made
-            response.read()
+
+
+        # read all of the response before another request can be made
+        data = response.read()
+        if data:
+            doc = json.loads(data)
+        else:
+            doc = dict()
 
         self.connection.close()
 
-        yield (response.status, data)
+        yield (response.status, doc)
 
 
     def close(self, job_id):
@@ -325,7 +331,7 @@ class EngineApiClient:
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value   
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -335,12 +341,12 @@ class EngineApiClient:
         query = ''
         if include_records:
             query = '&expand=true'
-        
+
         if normalized_probability_filter_value:
             query += '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
-            query += '&anomalyScore=' + str(anomaly_score_filter_value)  
+            query += '&anomalyScore=' + str(anomaly_score_filter_value)
 
 
 
@@ -378,13 +384,13 @@ class EngineApiClient:
         get them all appending the buckets in a list. A list of buckets is
         returned.
 
-        start_date, end_date Must either be an epoch time or ISO 8601 format 
+        start_date, end_date Must either be an epoch time or ISO 8601 format
         strings see the Prelert Engine API docs for help.
         include_records Anomaly records are included in the buckets
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value   
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -410,7 +416,7 @@ class EngineApiClient:
             score_filter = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
-            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)  
+            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}".format(job_id,
@@ -442,6 +448,9 @@ class EngineApiClient:
                 logging.error("Get buckets by date response = " + str(response.status) + " " + response.reason)
                 message = json.load(response)
 
+                if message:
+                    message = json.loads(message)
+
                 self.connection.close()
                 return (response.status, message)
 
@@ -465,7 +474,7 @@ class EngineApiClient:
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value       
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) tuple
@@ -483,7 +492,7 @@ class EngineApiClient:
             score_filter = '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
-            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)    
+            score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}".format(
@@ -518,6 +527,9 @@ class EngineApiClient:
                 logging.error("Get all buckets response = " + str(response.status) + " " + response.reason)
 
                 message = json.load(response)
+                if message:
+                    message = json.loads(message)
+
                 self.connection.close()
                 return (response.status, message)
 
@@ -547,7 +559,7 @@ class EngineApiClient:
         normalized_probability_filter_value If not none return only the records with
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
-            an anomalyScore >= anomaly_score_filter_value    
+            an anomalyScore >= anomaly_score_filter_value
 
         Returns a (http_status_code, records) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -641,7 +653,9 @@ class EngineApiClient:
 
         if response.status != 200:
             logging.error("Get logs response = " + str(response.status) + " " + response.reason)
-            response_data = json.load(response)
+            response_data = response.read()
+            if response_data:
+                response_data = json.loads(response_data)
         else:
             logging.debug("Get zipped logs response = " + str(response.status))
             response_data = response.read()
