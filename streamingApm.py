@@ -209,11 +209,6 @@ def main():
         print
         print "Date,Bucket ID,Anomaly Score,Max Normalized Probablility"
 
-        (http_status_code, response) = engine_client.upload(job_id, header)
-        if http_status_code != 202:
-            print (http_status_code, json.dumps(response))
-            return
-
         data = header
         for record in record_generator:
             # format as csv and append new line
