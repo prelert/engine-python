@@ -314,7 +314,6 @@ def runRealtime(job_id, cloudwatch_conn, engine_client):
                 data = ''
                 for met in tranposed_metrics:
                     json_str = json.dumps(met)
-                    print json_str
                     data += json_str + '\n'
 
 
