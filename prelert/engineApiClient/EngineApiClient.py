@@ -281,20 +281,62 @@ class EngineApiClient:
 
         return (response.status, msg)
 
-    def getBucket(self, job_id, bucket_id, include_records=False):
+    def flush(self, job_id, calc_interim=False):
+        """
+        Flush the job, such that when this call returns no data is
+        being held in buffers.
+        If calc_interim is set to True then interim results for the
+        most recent incomplete bucket will be calculated.
+        Returns a (http_status_code, response_data) tuple, if
+        http_status_code != 200 response_data is an error object.
+        """
+
+        url = self.base_url + "/data/" + job_id + "/flush"
+        if calc_interim:
+            url += "?calcInterim=true"
+
+        self.connection.connect()
+        self.connection.request("POST", url)
+        response = self.connection.getresponse()
+        if response.status != 200:
+            logging.error("Flush response = " + str(response.status) + " "
+                + response.reason)
+        else:
+            logging.debug("Flush response data = " + response.read())
+
+        # read all of the response before another request can be made
+        data = response.read()
+        if data:
+            msg = json.loads(data)
+        else:
+            msg = dict()
+
+        self.connection.close()
+
+        return (response.status, msg)
+
+    def getBucket(self, job_id, bucket_id, include_records=False,
+                  include_interim=False):
         '''
         Get the individual result bucket for the job and bucket id
         If include_records is True the anomaly records are nested in the
         resulting dictionary.
+        If include_interim is True then interim results will be returned as
+        well as final results.
 
         Returns a (http_status_code, bucket) tuple if successful else
         if http_status_code != 200 (http_status_code, error_doc) is
         returned
         '''
 
+        query_char = '?'
         query = ''
         if include_records:
-            query = '?expand=true'
+            query = query_char + 'expand=true'
+            query_char = '&'
+        if include_interim:
+            query += query_char + 'includeInterim=true'
+            query_char = '&'
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/{1}{2}".format(job_id, bucket_id, query)
@@ -320,7 +362,8 @@ class EngineApiClient:
         return (response.status, msg)
 
     def getBuckets(self, job_id, skip=0, take=100, include_records=False,
-                normalized_probability_filter_value=None, anomaly_score_filter_value=None):
+                normalized_probability_filter_value=None, anomaly_score_filter_value=None,
+                include_interim=False):
         '''
         Return a page of the job's buckets results.
         skip the first N buckets
@@ -330,6 +373,7 @@ class EngineApiClient:
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value
+        include_interim Should interim results be returned as well as final results?
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -340,13 +384,14 @@ class EngineApiClient:
         if include_records:
             query = '&expand=true'
 
+        if include_interim:
+            query += '&includeInterim=true'
+
         if normalized_probability_filter_value:
             query += '&normalizedProbability=' + str(normalized_probability_filter_value)
 
         if anomaly_score_filter_value:
             query += '&anomalyScore=' + str(anomaly_score_filter_value)
-
-
 
         headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}".format(
@@ -374,8 +419,8 @@ class EngineApiClient:
 
 
     def getBucketsByDate(self, job_id, start_date, end_date, include_records=False,
-            normalized_probability_filter_value=None, anomaly_score_filter_value=None):
-
+            normalized_probability_filter_value=None, anomaly_score_filter_value=None,
+            include_interim=False):
         """
         Return all the job's buckets results between 2 dates.  If there is more
         than one page of results for the given data range this function will
@@ -389,6 +434,7 @@ class EngineApiClient:
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value
+        include_interim Should interim results be returned as well as final results?
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
@@ -416,9 +462,13 @@ class EngineApiClient:
         if anomaly_score_filter_value:
             score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)
 
+        include_interim_arg = ''
+        if include_interim:
+            include_interim_arg = '&includeInterim=true'
+
         headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}".format(job_id,
-            skip, take, expand, start_arg, end_arg, score_filter)
+        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}{7}".format(job_id,
+            skip, take, expand, start_arg, end_arg, score_filter, include_interim_arg)
 
         self.connection.connect()
         self.connection.request("GET", url)
@@ -461,7 +511,8 @@ class EngineApiClient:
 
 
     def getAllBuckets(self, job_id, include_records=False,
-                normalized_probability_filter_value=None, anomaly_score_filter_value=None):
+                normalized_probability_filter_value=None, anomaly_score_filter_value=None,
+                include_interim=False):
         """
         Return all the job's buckets results.  If more than 1
         page of buckets are available continue to with the next
@@ -473,6 +524,7 @@ class EngineApiClient:
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value
+        include_interim Should interim results be returned as well as final results?
 
         Returns a (http_status_code, buckets) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) tuple
@@ -492,10 +544,13 @@ class EngineApiClient:
         if anomaly_score_filter_value:
             score_filter += '&anomalyScore=' + str(anomaly_score_filter_value)
 
-        headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}".format(
-            job_id, skip, take, expand, score_filter)
+        include_interim_arg = ''
+        if include_interim:
+            include_interim_arg = '&includeInterim=true'
 
+        headers = {'Content-Type':'application/json'}
+        url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}".format(
+            job_id, skip, take, expand, score_filter, include_interim_arg)
 
 
         self.connection.connect()
@@ -541,7 +596,8 @@ class EngineApiClient:
 
     def getRecords(self, job_id, skip=0, take=100, start_date=None,
             end_date=None, sort_field=None, sort_descending=True,
-            normalized_probability_filter_value=None, anomaly_score_filter_value=None):
+            normalized_probability_filter_value=None, anomaly_score_filter_value=None,
+            include_interim=False):
         """
         Get a page of the job's anomaly records.
         Records can be filtered by start & end date parameters and the scores.
@@ -558,13 +614,12 @@ class EngineApiClient:
             a normalizedProbability >= normalized_probability_filter_value
         anomaly_score_filter_value If not none return only the records with
             an anomalyScore >= anomaly_score_filter_value
+        include_interim Should interim results be returned as well as final results?
 
         Returns a (http_status_code, records) tuple if successful else
         if http_status_code != 200 a (http_status_code, error_doc) is
         returned
         """
-
-        expand = ''
 
         start_arg = ''
         if start_date:
@@ -585,10 +640,13 @@ class EngineApiClient:
         if anomaly_score_filter_value:
             filter_arg += '&anomalyScore=' + str(anomaly_score_filter_value)
 
+        include_interim_arg = ''
+        if include_interim:
+            include_interim_arg = '&includeInterim=true'
 
         headers = {'Content-Type':'application/json'}
-        url = self.base_url + "/results/{0}/records?skip={1}&take={2}{3}{4}{5}{6}".format(
-            job_id, skip, take, start_arg, end_arg, sort_arg, filter_arg)
+        url = self.base_url + "/results/{0}/records?skip={1}&take={2}{3}{4}{5}{6}{7}".format(
+            job_id, skip, take, start_arg, end_arg, sort_arg, filter_arg, include_interim_arg)
 
         self.connection.connect()
         self.connection.request("GET", url)
@@ -665,8 +723,6 @@ class EngineApiClient:
         self.connection.close()
 
         return (response.status, msg)
-
-
 
 
     def delete(self, job_id):
