@@ -223,13 +223,6 @@ def main():
                     print (http_status_code, json.dumps(response))
                     break
 
-                # commit the uploaded data, when this returns the data
-                # has been analyzed and the results are available.
-                # (http_status_code, response) = engine_client.close(job_id)
-                # if http_status_code != 202:
-                #     print (http_status_code, json.dumps(response))
-                #     break
-
                 # get the latest results...
                 (http_status_code, response) = engine_client.getBucketsByDate(job_id=job_id,
                     start_date=str(next_bucket_id), end_date=None)
