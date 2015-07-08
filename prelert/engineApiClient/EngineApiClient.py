@@ -54,27 +54,7 @@ class EngineApiClient:
         response is an error message
         """
 
-        self.connection.connect()
-
-        self.connection.request("GET", self.base_url + "/jobs/" + job_id)
-        response = self.connection.getresponse();
-
-        if response.status != 200:
-            logging.error("Get job response = " + str(response.status) + " "
-                + response.reason)
-        else:
-            logging.debug("Get job response = " + str(response.status))
-
-        data = response.read()
-        if data:
-            job = json.loads(data)
-        else:
-            job = dict()
-
-        self.connection.close()
-
-        return (response.status, job)
-
+        return self._get(self.base_url + "/jobs/" + job_id, "job")
 
     def getJobs(self, skip=0, take=100):
         '''
@@ -88,28 +68,7 @@ class EngineApiClient:
         '''
 
         url = self.base_url + "/jobs?skip={0}&take={1}".format(skip, take)
-
-        self.connection.connect()
-        self.connection.request("GET", self.base_url + "/jobs")
-        response = self.connection.getresponse();
-
-        if response.status != 200:
-            logging.error("Get jobs response = " + str(response.status) + " "
-                + response.reason)
-        else:
-            logging.debug("Get jobs response = " + str(response.status))
-
-        data = response.read()
-        if data:
-            jobs = json.loads(data)
-        else:
-            jobs = dict()
-
-
-        self.connection.close()
-
-        return (response.status, jobs)
-
+        return self._get(url, "jobs")
 
     def createJob(self, payload):
         """
@@ -118,29 +77,11 @@ class EngineApiClient:
         the JSON result doc will have an 'id' field set to the newly created
         job id else json will be an error document.
         """
+
+        url =  self.base_url + "/jobs"
         headers = {'Content-Type':'application/json'}
 
-        self.connection.connect()
-        self.connection.request("POST", self.base_url + "/jobs", payload, headers)
-
-        response = self.connection.getresponse();
-
-        if response.status != 201:
-            logging.error("Create job response = " + str(response.status) + " "
-                + response.reason)
-        else:
-            logging.debug("Create job response = " + str(response.status))
-
-        data = response.read()
-        if data:
-            doc = json.loads(data)
-        else:
-            doc = dict()
-
-        self.connection.close()
-
-        return (response.status, doc)
-
+        return self._post(url, "Create job", headers, payload)
 
     def upload(self, job_id, data, gzipped=False):
         """
@@ -239,30 +180,12 @@ class EngineApiClient:
         """
         Close the job once data has been streamed
         Returns a (http_status_code, response_data) tuple, if
-        http_status_code != 202 response_data is an error object.
+        http_status_code != 200 response_data is an error object.
         """
 
         url = self.base_url + "/data/" + job_id + "/close"
 
-        self.connection.connect()
-        self.connection.request("POST", url)
-        response = self.connection.getresponse()
-        if response.status != 202:
-            logging.error("Close response = " + str(response.status) + " "
-                + response.reason)
-        else:
-            logging.debug("Close response data = " + response.read())
-
-        # read all of the response before another request can be made
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._post(url, "Close", headers={}, payload=None)
 
     def flush(self, job_id, calc_interim=False):
         """
@@ -278,25 +201,7 @@ class EngineApiClient:
         if calc_interim:
             url += "?calcInterim=true"
 
-        self.connection.connect()
-        self.connection.request("POST", url)
-        response = self.connection.getresponse()
-        if response.status != 200:
-            logging.error("Flush response = " + str(response.status) + " "
-                + response.reason)
-        else:
-            logging.debug("Flush response data = " + response.read())
-
-        # read all of the response before another request can be made
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._post(url, "Flush", headers={}, payload=None)
 
     def preview(self, job_id, data, gzipped=False):
         """
@@ -311,38 +216,6 @@ class EngineApiClient:
         """
         return self._uploadToEndpoint(job_id, data, 'preview', gzipped)
 
-    def _uploadToEndpoint(self, job_id, data, endpoint, gzipped=False):
-        """
-        Upload data to the specified endpoint.
-        Data can be a string or an open file object.
-        endpoint is the endpoint and *should* not be surrounded by backslashes '/'
-        If the data is gzipped compressed set gzipped to True
-
-        Returns a (http_status_code, response_data) tuple, if
-        http_status_code != 202 response_data is an error message.
-
-        """
-        headers = {}
-        if gzipped:
-            headers['Content-Encoding'] = 'gzip'
-
-        url = self.base_url + "/" + endpoint + "/" + job_id
-
-        self.connection.connect()
-        self.connection.request("POST", url, data, headers)
-        response = self.connection.getresponse();
-        if response.status != 202:
-            logging.error(endpoint + " response = " + str(response.status)
-                + " " + response.reason)
-        else:
-            logging.debug(endpoint + " response = " + str(response.status))
-
-        # read all of the response before another request can be made
-        data = response.read()
-
-        self.connection.close()
-
-        return (response.status, data)
 
     def getBucket(self, job_id, bucket_id, include_records=False,
                   include_interim=False):
@@ -367,28 +240,9 @@ class EngineApiClient:
             query += query_char + 'includeInterim=true'
             query_char = '&'
 
-        headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/{1}{2}".format(job_id, bucket_id, query)
 
-        self.connection.connect()
-        self.connection.request("GET", url)
-        response = self.connection.getresponse();
-
-        if response.status != 200:
-            logging.error("Get bucket response = " + str(response.status) + " " + response.reason)
-        else:
-            logging.debug("Get bucket response = " + str(response.status))
-
-        # read all of the response
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._get(url, "bucket")
 
     def getBuckets(self, job_id, skip=0, take=100, include_records=False,
                 normalized_probability_filter_value=None, anomaly_score_filter_value=None,
@@ -422,29 +276,10 @@ class EngineApiClient:
         if anomaly_score_filter_value:
             query += '&anomalyScore=' + str(anomaly_score_filter_value)
 
-        headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}".format(
             job_id, skip, take, query)
 
-        self.connection.connect()
-        self.connection.request("GET", url)
-        response = self.connection.getresponse();
-
-        if response.status != 200:
-            logging.error("Get buckets response = " + str(response.status) + " " + response.reason)
-        else:
-            logging.debug("Get buckets response = " + str(response.status))
-
-        # read all of the response
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._get(url, "buckets")
 
 
     def getBucketsByDate(self, job_id, start_date, end_date, include_records=False,
@@ -495,7 +330,6 @@ class EngineApiClient:
         if include_interim:
             include_interim_arg = '&includeInterim=true'
 
-        headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}{6}{7}".format(job_id,
             skip, take, expand, start_arg, end_arg, score_filter, include_interim_arg)
 
@@ -577,7 +411,6 @@ class EngineApiClient:
         if include_interim:
             include_interim_arg = '&includeInterim=true'
 
-        headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/buckets?skip={1}&take={2}{3}{4}{5}".format(
             job_id, skip, take, expand, score_filter, include_interim_arg)
 
@@ -673,29 +506,10 @@ class EngineApiClient:
         if include_interim:
             include_interim_arg = '&includeInterim=true'
 
-        headers = {'Content-Type':'application/json'}
         url = self.base_url + "/results/{0}/records?skip={1}&take={2}{3}{4}{5}{6}{7}".format(
             job_id, skip, take, start_arg, end_arg, sort_arg, filter_arg, include_interim_arg)
 
-        self.connection.connect()
-        self.connection.request("GET", url)
-        response = self.connection.getresponse();
-
-        if response.status != 200:
-            logging.error("Get records response = " + str(response.status) + " " + response.reason)
-        else:
-            logging.debug("Get records response = " + str(response.status))
-
-        # read all of the response
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._get(url, "records")
 
 
     def alerts_longpoll(self, job_id, normalized_probability_threshold=None,
@@ -733,25 +547,7 @@ class EngineApiClient:
         url = self.base_url + "/alerts_longpoll/{0}/{1}{2}{3}".format(
             job_id, prob_arg, score_arg, timeout_arg)
 
-        self.connection.connect()
-        self.connection.request("GET", url)
-        response = self.connection.getresponse();
-
-        # read all of the response
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        if response.status != 200:
-            logging.error("Subscribe alerts response = " + str(response.status))
-        else:
-            logging.debug("Subscribe alerts response = " + str(response.status))
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._get(url, "alerts")
 
 
     def delete(self, job_id):
@@ -787,21 +583,111 @@ class EngineApiClient:
         == 200 else the error is read into a json document and
         returns (http_status_code, error_doc)
         """
+        url = self.base_url + "/logs/" + job_id
+        return self._get(url, "zipped logs", expects_json=False)
 
+
+    def _get(self, url, request_description, expects_json=True):
+        """
+          General GET request.
+
+          request_description is used in log messages which are of the form
+          'Get ' + request_description + ' response = ...'
+          If expects_json is True then the response will be parsed
+          into a JSON object
+
+          Returns a (status code, JSON/dictonary object) tuple if expects_json
+          is true else (status code, response).
+        """
         self.connection.connect()
-        self.connection.request("GET", self.base_url + "/logs/" + job_id)
+        self.connection.request("GET", url)
         response = self.connection.getresponse();
 
         if response.status != 200:
-            logging.error("Get logs response = " + str(response.status) + " " + response.reason)
-            response_data = response.read()
-            if response_data:
-                response_data = json.loads(response_data)
+            logging.error("Get " + request_description + " response = " + str(response.status) + " "
+                + response.reason)
         else:
-            logging.debug("Get zipped logs response = " + str(response.status))
-            response_data = response.read()
+            logging.debug("Get " + request_description + " response = " + str(response.status))
+
+        data = response.read()
+        if not expects_json:
+            return (response.status, data)
+
+        if data:
+            job = json.loads(data)
+        else:
+            job = dict()
 
         self.connection.close()
 
-        return (response.status, response_data)
+        return (response.status, job)
 
+    def _post(self, url, request_description, headers={}, payload=None):
+        """
+          General POST request.
+          If the response code is either 200, 201 or 202 then the request is
+          considered a success
+
+          url is the target URL
+          headers is a dictionary object defining the request headers
+          if not required use {}
+          payload is the data to be sent
+          request_description is used in log messages which are of the form
+          request_description + ' response = ...'
+
+          Returns a (status code, JSON/dictonary object) tuple
+        """
+
+        self.connection.connect()
+        self.connection.request("POST", url, payload, headers)
+
+        response = self.connection.getresponse();
+
+        if not response.status in [200, 201, 202]:
+            logging.error(request_description + " response = " + str(response.status) + " "
+                + response.reason)
+        else:
+            logging.debug(request_description + " response = " + str(response.status))
+
+        data = response.read()
+        if data:
+            doc = json.loads(data)
+        else:
+            doc = dict()
+
+        self.connection.close()
+
+        return (response.status, doc)
+
+    def _uploadToEndpoint(self, job_id, data, endpoint, gzipped=False):
+        """
+        Upload data to the specified endpoint.
+        Data can be a string or an open file object.
+        endpoint is the endpoint and *should* not be surrounded by backslashes '/'
+        If the data is gzipped compressed set gzipped to True
+
+        Returns a (http_status_code, response_data) tuple, if
+        http_status_code != 202 response_data is an error message.
+
+        """
+        headers = {}
+        if gzipped:
+            headers['Content-Encoding'] = 'gzip'
+
+        url = self.base_url + "/" + endpoint + "/" + job_id
+
+        self.connection.connect()
+        self.connection.request("POST", url, data, headers)
+        response = self.connection.getresponse();
+        if response.status != 202:
+            logging.error(endpoint + " response = " + str(response.status)
+                + " " + response.reason)
+        else:
+            logging.debug(endpoint + " response = " + str(response.status))
+
+        # read all of the response before another request can be made
+        data = response.read()
+
+        self.connection.close()
+
+        return (response.status, data)
