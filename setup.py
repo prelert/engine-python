@@ -23,7 +23,7 @@ Prelert Python packages
 from distutils.core import setup
 setup(name='Prelert',
       description='Python packages for Prelert',
-      version='1.4',
+      version='1.5.0',
       license='Apache License, Version 2.0',
       url='https://github.com/prelert/engine-python',
       packages=['prelert', 'prelert.engineApiClient'],
