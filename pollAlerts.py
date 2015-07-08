@@ -79,7 +79,7 @@ def printAlert(alert):
         data = alert['records']
 
     line = "{0}, {1}, {2}, {3}. {4}".format(alert['timestamp'],
-                alert['anomalyScore'], alert['normalizedProbability'],
+                alert['anomalyScore'], alert['maxNormalizedProbability'],
                 alert['uri'], data)
 
     print line
