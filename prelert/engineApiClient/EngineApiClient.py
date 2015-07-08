@@ -512,6 +512,25 @@ class EngineApiClient:
         return self._get(url, "records")
 
 
+    def getCategoryDefinitions(self, job_id):
+        """
+        Get a page of category definitions
+        """
+
+        url = self.base_url + "/results/{0}/categorydefinitions".format(job_id)
+        return self._get(url, "Category definitions")
+
+
+    def getCategoryDefinition(self, job_id, category_id):
+        """
+        Get a single category definition
+
+        category_id is the id of the category
+        """
+        url = self.base_url + "/results/{0}/categorydefinitions/{1}".format(job_id, category_id)
+        return self._get(url, "Category definition")
+
+
     def alerts_longpoll(self, job_id, normalized_probability_threshold=None,
         anomaly_score_threshold=None, timeout=None):
         """
