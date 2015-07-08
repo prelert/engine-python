@@ -151,31 +151,14 @@ class EngineApiClient:
         Returns a (http_status_code, response_data) tuple, if
         http_status_code != 202 response_data is an error message.
         """
-        headers = {}
-        if gzipped:
-            headers['Content-Encoding'] = 'gzip'
+        (status, data) = self._uploadToEndpoint(job_id, data, 'data', gzipped)
 
-        url = self.base_url + "/data/" + job_id
-
-        self.connection.connect()
-        self.connection.request("POST", url, data, headers)
-        response = self.connection.getresponse();
-        if response.status != 202:
-            logging.error("Upload file response = " + str(response.status)
-                + " " + response.reason)
-        else:
-            logging.debug("Upload response = " + str(response.status))
-
-        # read all of the response before another request can be made
-        data = response.read()
         if data:
             doc = json.loads(data)
         else:
             doc = dict()
 
-        self.connection.close()
-
-        return (response.status, doc)
+        return (status, doc)
 
 
     def stream(self, job_id, data, gzipped=False):
@@ -314,6 +297,52 @@ class EngineApiClient:
         self.connection.close()
 
         return (response.status, msg)
+
+    def preview(self, job_id, data, gzipped=False):
+        """
+        Upload data to the jobs preview endpoint, the response
+        is text/csv preview of the uploaded data after the transforms
+        have been applied.
+        Data can be a string or an open file object.
+        If the data is gzipped compressed set gzipped to True
+
+        Returns a (http_status_code, response_data) tuple, if
+        http_status_code != 202 response_data is an error message.
+        """
+        return self._uploadToEndpoint(job_id, data, 'preview', gzipped)
+
+    def _uploadToEndpoint(self, job_id, data, endpoint, gzipped=False):
+        """
+        Upload data to the specified endpoint.
+        Data can be a string or an open file object.
+        endpoint is the endpoint and *should* not be surrounded by backslashes '/'
+        If the data is gzipped compressed set gzipped to True
+
+        Returns a (http_status_code, response_data) tuple, if
+        http_status_code != 202 response_data is an error message.
+
+        """
+        headers = {}
+        if gzipped:
+            headers['Content-Encoding'] = 'gzip'
+
+        url = self.base_url + "/" + endpoint + "/" + job_id
+
+        self.connection.connect()
+        self.connection.request("POST", url, data, headers)
+        response = self.connection.getresponse();
+        if response.status != 202:
+            logging.error(endpoint + " response = " + str(response.status)
+                + " " + response.reason)
+        else:
+            logging.debug(endpoint + " response = " + str(response.status))
+
+        # read all of the response before another request can be made
+        data = response.read()
+
+        self.connection.close()
+
+        return (response.status, data)
 
     def getBucket(self, job_id, bucket_id, include_records=False,
                   include_interim=False):
