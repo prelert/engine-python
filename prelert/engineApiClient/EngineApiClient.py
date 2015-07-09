@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright 2014 Prelert Ltd                                               #
+# Copyright 2015 Prelert Ltd                                               #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -603,7 +603,15 @@ class EngineApiClient:
         returns (http_status_code, error_doc)
         """
         url = self.base_url + "/logs/" + job_id
-        return self._get(url, "zipped logs", expects_json=False)
+        (http_status_code, data) = self._get(url, "zipped logs", expects_json=False)
+
+        # if not a 200 code the response is a JSON error message
+        if http_status_code == 200:
+            return (http_status_code, data)
+        else:
+            error = json.loads(data)
+            return (http_status_code, error)
+
 
 
     def _get(self, url, request_description, expects_json=True):
