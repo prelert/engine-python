@@ -183,7 +183,7 @@ def main():
         "dataDescription" : {\
             "fieldDelimiter":",",\
             "timeField":"time",\
-            "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssX"\
+            "timeFormat":"yyyy-MM-dd\'T\'HH:mm:ssXXX"\
         }\
     }'
 
