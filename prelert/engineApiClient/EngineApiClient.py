@@ -83,7 +83,7 @@ class EngineApiClient:
 
         return self._post(url, "Create job", headers, payload)
 
-    def upload(self, job_id, data, gzipped=False):
+    def upload(self, job_id, data, gzipped=False, store=False):
         """
         Upload data to the jobs data endpoint.
         Data can be a string or an open file object.
@@ -92,7 +92,8 @@ class EngineApiClient:
         Returns a (http_status_code, response_data) tuple, if
         http_status_code != 202 response_data is an error message.
         """
-        (status, data) = self._uploadToEndpoint(job_id, data, 'data', gzipped)
+        endpoint = 'dataload' if store else 'data'
+        (status, data) = self._uploadToEndpoint(job_id, data, endpoint, gzipped)
 
         if data:
             doc = json.loads(data)
