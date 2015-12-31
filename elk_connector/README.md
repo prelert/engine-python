@@ -113,11 +113,11 @@ real time. By default the last 60 seconds of logs are read every 60 seconds this
 can be changed by setting the '--update-interval' argument.
 
 ####For help see
-    python realtime_logstash.py --help
+    python elk_connector_realtime.py --help
 
 ####Example
 Connect to the Elasticsearch cluster on host 'elasticsearch-server' and the Prelert
 Engine API on 'prelert-server' sending the data to job 'XXXX'
 
-    python realtime_logstash.py --es-host=elasticsearch-server
+    python elk_connector_realtime.py --es-host=elasticsearch-server
         --api-host=prelert-server --job-id=XXXX configs/syslog.json 
