@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ############################################################################
 #                                                                          #
-# Copyright 2014 Prelert Ltd                                               #
+# Copyright 2014-2016 Prelert Ltd                                          #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -23,7 +23,7 @@ Prelert Python packages
 from distutils.core import setup
 setup(name='Prelert',
       description='Python packages for Prelert',
-      version='1.5.0',
+      version='2.0.0',
       license='Apache License, Version 2.0',
       url='https://github.com/prelert/engine-python',
       packages=['prelert', 'prelert.engineApiClient'],
