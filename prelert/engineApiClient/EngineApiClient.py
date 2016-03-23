@@ -32,7 +32,7 @@ class EngineApiClient:
         Create a HTTP connection to host:port
         host is the host machine
         base_url is the API URl this should contain the version number
-          e.g. /engine/v1
+          e.g. /engine/v2
         The default port is 8080
         """
         self.host = host

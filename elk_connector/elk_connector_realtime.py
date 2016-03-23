@@ -64,7 +64,7 @@ ES_PORT = 9200
 # Prelert Engine API connection prarams
 API_HOST = 'localhost'
 API_PORT = 8080
-API_BASE_URL = 'engine/v1'
+API_BASE_URL = 'engine/v2'
 
 # The maximum number of documents to request from
 # Elasticsearch in each query

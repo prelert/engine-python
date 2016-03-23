@@ -49,7 +49,7 @@ from prelert.engineApiClient import EngineApiClient
 # Default connection prarams
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v1'
+BASE_URL = 'engine/v2'
 
 ZERO_OFFSET = timedelta(0)
 

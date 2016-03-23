@@ -49,7 +49,7 @@ from prelert.engineApiClient import EngineApiClient
 # Prelert Engine API connection prarams
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v1'
+BASE_URL = 'engine/v2'
 
 
 def setupLogging():

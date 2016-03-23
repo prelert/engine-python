@@ -70,7 +70,7 @@ from prelert.engineApiClient import EngineApiClient
 # Prelert Engine API default connection prarams
 API_HOST = 'localhost'
 API_PORT = 8080
-API_BASE_URL = 'engine/v1'
+API_BASE_URL = 'engine/v2'
 
 ''' Interval between query new data from CloudWatch (seconds)'''
 UPDATE_INTERVAL=300

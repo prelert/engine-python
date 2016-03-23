@@ -56,7 +56,7 @@ limit = 10000
 if len(sys.argv) >= 5:
     limit = sys.argv[4]
 
-url = 'http://%s:%s/engine/v1/results/%s/influencers?take=%s' % (server, port, job, limit)
+url = 'http://%s:%s/engine/v2/results/%s/influencers?take=%s' % (server, port, job, limit)
 response = urlopen(url).read()
 json = json.loads(response.decode('utf-8'))
 writtenHeader = False

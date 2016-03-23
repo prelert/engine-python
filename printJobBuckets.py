@@ -40,7 +40,7 @@ from prelert.engineApiClient import EngineApiClient
 # defaults
 HOST = 'localhost'
 PORT = 8080
-BASE_URL = 'engine/v1'
+BASE_URL = 'engine/v2'
 
 # time between polling for new results
 POLL_INTERVAL_SECS = 10
