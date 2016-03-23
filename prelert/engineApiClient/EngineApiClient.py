@@ -218,10 +218,10 @@ class EngineApiClient:
         return self._uploadToEndpoint(job_id, data, 'preview', gzipped)
 
 
-    def getBucket(self, job_id, bucket_id, include_records=False,
+    def getBucket(self, job_id, bucket_timestamp, include_records=False,
                   include_interim=False):
         '''
-        Get the individual result bucket for the job and bucket id
+        Get the individual result bucket for the job and bucket timestamp
         If include_records is True the anomaly records are nested in the
         resulting dictionary.
         If include_interim is True then interim results will be returned as
@@ -241,7 +241,7 @@ class EngineApiClient:
             query += query_char + 'includeInterim=true'
             query_char = '&'
 
-        url = self.base_url + "/results/{0}/{1}{2}".format(job_id, bucket_id, query)
+        url = self.base_url + "/results/{0}/{1}{2}".format(job_id, bucket_timestamp, query)
 
         return self._get(url, "bucket")
 

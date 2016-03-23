@@ -18,7 +18,7 @@
 ############################################################################
 '''
 Pull the latest results for the provided job id and print
-the bucket timestamp, bucket id and anomaly score.
+the bucket timestamp and anomaly score.
 
 The script is invoked with 1 positional argument -the id of the 
 job to query the results of. Additional optional arguments

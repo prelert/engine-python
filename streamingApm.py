@@ -207,7 +207,7 @@ def main():
         # for the results
         next_bucket_id = 1
         print
-        print "Date,Bucket ID,Anomaly Score,Max Normalized Probablility"
+        print "Date,Anomaly Score,Max Normalized Probablility"
 
         data = header
         for record in record_generator:
@@ -232,7 +232,7 @@ def main():
 
                 # and print them
                 for bucket in response:
-                    print "{0},{1},{2},{3}".format(bucket['timestamp'], bucket['id'],
+                    print "{0},{1},{2},{3}".format(bucket['timestamp'],
                         bucket['anomalyScore'], bucket['maxNormalizedProbability'])
 
                 if len(response) > 0:

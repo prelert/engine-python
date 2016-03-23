@@ -32,8 +32,8 @@ The script is invoked with 1 positional argument the farequote.csv
 file and has optional arguments to specify the location of the 
 Engine API. Run the script with '--help' to see the options.
 
-The output is CSV print out of date, bucket id and anomaly score.
-If a bucket id is specified only the anomaly records for that bucket
+The output is CSV print out of date and anomaly score.
+If a bucket timestamp is specified only the anomaly records for that bucket
 are returned.
 '''
 
