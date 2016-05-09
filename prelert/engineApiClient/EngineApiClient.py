@@ -481,9 +481,8 @@ class EngineApiClient:
         Get a page of the job's anomaly records.
         Records can be filtered by start & end date parameters and the scores.
 
-        skip the first N buckets
-        take a maxium of this number of buckets
-        include_records Anomaly records are included in the buckets.
+        skip the first N records
+        take a maximum of this number of records
         start_date, end_date Must either be an epoch time or ISO 8601 format
             see the Prelert Engine API docs for help
         sort_field The field to sort the results by, ignored if None
@@ -546,6 +545,55 @@ class EngineApiClient:
         """
         url = self.base_url + "/results/{0}/categorydefinitions/{1}".format(job_id, category_id)
         return self._get(url, "Category definition")
+
+
+    def getInfluencers(self, job_id, skip=0, take=100, start_date=None,
+            end_date=None, sort_field=None, sort_descending=True,
+            anomaly_score_filter_value=None, include_interim=False):
+        """
+        Get a page of the job's influencers.
+        Influencers can be filtered by start & end date parameters and the anomaly score.
+
+        skip the first N influencers
+        take a maximum of this number of influencers
+        start_date, end_date Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help
+        sort_field The field to sort the influencers by, ignored if None
+        sort_descending If sort_field is not None then sort influencers
+            in descending order if True else sort ascending
+        anomaly_score_filter_value If not none return only the influencers with
+            an anomalyScore >= anomaly_score_filter_value
+        include_interim Should interim influencers be returned as well as final ones?
+
+        Returns a (http_status_code, influencers) tuple if successful else
+        if http_status_code != 200 a (http_status_code, error_doc) is
+        returned
+        """
+
+        start_arg = ''
+        if start_date:
+            start_arg = '&start=' + urllib.quote(start_date)
+
+        end_arg = ''
+        if end_date:
+            end_arg = '&end=' + urllib.quote(end_date)
+
+        sort_arg = ''
+        if sort_field:
+            sort_arg = "&sort=" + urllib.quote(sort_field) + '&desc=' + ('true' if sort_descending else 'false')
+
+        filter_arg = ''
+        if anomaly_score_filter_value:
+            filter_arg += '&anomalyScore=' + str(anomaly_score_filter_value)
+
+        include_interim_arg = ''
+        if include_interim:
+            include_interim_arg = '&includeInterim=true'
+
+        url = self.base_url + '/results/{0}/influencers?skip={1}&take={2}{3}{4}{5}{6}{7}'.format(
+            job_id, skip, take, start_arg, end_arg, sort_arg, filter_arg, include_interim_arg)
+
+        return self._get(url, "influencers")
 
 
     def alerts_longpoll(self, job_id, normalized_probability_threshold=None,
