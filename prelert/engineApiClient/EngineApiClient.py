@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright 2015 Prelert Ltd                                               #
+# Copyright 2015-2016 Prelert Ltd                                          #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -188,19 +188,35 @@ class EngineApiClient:
 
         return self._post(url, "Close", headers={}, payload=None)
 
-    def flush(self, job_id, calc_interim=False):
+    def flush(self, job_id, calc_interim=False, start_date=None, end_date=None, advance_time=None):
         """
         Flush the job, such that when this call returns no data is
         being held in buffers.
-        If calc_interim is set to True then interim results for the
-        most recent incomplete bucket will be calculated.
+        calc_interim If set to True then interim results for all
+            incomplete buckets will be calculated
+        start_date, end_date Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help. These are only
+            accepted if calc_interim is True and they limit the range
+            of buckets for which interim results will be calculated.
+            If only start_date is specified, interim results will be calculated
+            only for the bucket indicated by start_date.
+        advance_time Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help. If set, final
+            results will be calculated up to the time indicated by
+            advance_time.
+
         Returns a (http_status_code, response_data) tuple, if
         http_status_code != 200 response_data is an error object.
         """
 
         url = self.base_url + "/data/" + job_id + "/flush"
-        if calc_interim:
-            url += "?calcInterim=true"
+
+        calc_interim_arg = '?calcInterim=true' if calc_interim else '?calcInterim=false'
+        start_arg = '&start=' + urllib.quote(start_date) if start_date else ''
+        end_arg = '&end=' + urllib.quote(end_date) if end_date else ''
+        advance_time_arg = '&advanceTime=' + urllib.quote(advance_time) if advance_time else ''
+
+        url += calc_interim_arg + start_arg + end_arg + advance_time_arg
 
         return self._post(url, "Flush", headers={}, payload=None)
 
