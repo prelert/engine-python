@@ -78,7 +78,7 @@ class EngineApiClient:
         job id else json will be an error document.
         """
 
-        url =  self.base_url + "/jobs"
+        url = self.base_url + "/jobs"
         headers = {'Content-Type':'application/json'}
 
         return self._post(url, "Create job", headers, payload)
@@ -92,7 +92,7 @@ class EngineApiClient:
         :return: (http_status_code, acknowledgement) tuple if it was successful,
             or (http_status_code, error_doc) if http_status_code != 200
         """
-        headers = {'Content-Encoding': 'application/json'}
+        headers = {'Content-Type': 'application/json'}
         url = self.base_url + "/jobs/{0}/update".format(job_id)
         return self._put(url, 'Update job', headers=headers, payload=payload)
 
@@ -781,7 +781,7 @@ class EngineApiClient:
         :return: (http_status_code, updated_snapshot) tuple if it was successful,
             or (http_status_code, error_doc) if http_status_code != 200
         """
-        headers = {'Content-Encoding': 'application/json'}
+        headers = {'Content-Type': 'application/json'}
         payload = {'description': description}
         url = self.base_url + "/modelsnapshots/{0}/{1}/description".format(job_id, snapshot_id)
         return self._put(url, 'Update model snapshot description', headers=headers, payload=json.dumps(payload))
@@ -829,6 +829,42 @@ class EngineApiClient:
         """
         url = self.base_url + "/schedulers/{0}/stop".format(job_id)
         return self._post(url, 'Stop scheduler', headers={}, payload=None)
+
+    def validateDetector(self, payload):
+        """
+        Validates a detector.
+
+        :param payload: The JSON payload as string. See Prelert Engine API docs for help.
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        headers = {'Content-Type': 'application/json'}
+        url = self.base_url + "/validate/detector"
+        return self._post(url, 'Validate detector', headers, payload)
+
+    def validateTransform(self, payload):
+        """
+        Validates a transform.
+
+        :param payload: The JSON payload as string. See Prelert Engine API docs for help.
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        headers = {'Content-Type': 'application/json'}
+        url = self.base_url + "/validate/transform"
+        return self._post(url, 'Validate transform', headers, payload)
+
+    def validateTransforms(self, payload):
+        """
+        Validates an array of transforms.
+
+        :param payload: The JSON payload as string. See Prelert Engine API docs for help.
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        headers = {'Content-Type': 'application/json'}
+        url = self.base_url + "/validate/transforms"
+        return self._post(url, 'Validate transforms', headers, payload)
 
     def _get(self, url, request_description, expects_json=True):
         """
@@ -902,7 +938,7 @@ class EngineApiClient:
         return self._request_with_payload(url, request_description, headers, payload, 'PUT')
 
 
-    def _request_with_payload(self, url, request_description, headers={}, payload=None, method='POST'):
+    def _request_with_payload(self, url, request_description, headers, payload, method):
         """
           Executes a request that can have a payload with the given method (POST, PUT)
           If the response code is either 200, 201 or 202 then the request is
@@ -921,7 +957,7 @@ class EngineApiClient:
         self.connection.connect()
         self.connection.request(method, url, payload, headers)
 
-        response = self.connection.getresponse();
+        response = self.connection.getresponse()
 
         if not response.status in [200, 201, 202]:
             logging.error(request_description + " response = " + str(response.status) + " "
