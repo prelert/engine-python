@@ -642,23 +642,7 @@ class EngineApiClient:
         """
 
         url = self.base_url + "/jobs/" + job_id
-        self.connection.connect()
-        self.connection.request("DELETE", url)
-
-        response = self.connection.getresponse()
-        if response.status != 200:
-            logging.error("Delete response = " + str(response.status) + " "
-                + response.reason)
-
-        data = response.read()
-        if data:
-            msg = json.loads(data)
-        else:
-            msg = dict()
-
-        self.connection.close()
-
-        return (response.status, msg)
+        return self._delete(url, 'Delete job')
 
     def getZippedLogs(self, job_id):
         """
@@ -677,6 +661,107 @@ class EngineApiClient:
             error = json.loads(data)
             return (http_status_code, error)
 
+    def getModelSnapshots(self, job_id, skip=0, take=100,
+                          start_date=None, end_date=None,
+                          sort_field=None, sort_descending=True,
+                          description=None):
+        """
+        Get a page of the job's model snapshots.
+        Model snapshots can be filtered by date or by description.
+
+        :param job_id: the job id
+        :param skip: skips the first n model snapshots
+        :param take: specifies the number of snapshots to be returned
+        :param start_date: Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help
+        :param end_date: Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help
+        :param sort_field: If set, the snapshots will be sorted on the given field
+        :param sort_descending: The direction of the sorting (defaults to True)
+        :param description: If set, only results that match the description will be retrieved
+        :return: (http_status_code, model_snapshots) tuple if successful,
+            if not (i.e. http_status_code != 200) (http_status_code, error_doc) is returned
+        """
+        start_arg = ''
+        if start_date:
+            start_arg = '&start=' + urllib.quote(start_date)
+
+        end_arg = ''
+        if end_date:
+            end_arg = '&end=' + urllib.quote(end_date)
+
+        sort_arg = ''
+        if sort_field:
+            sort_arg = '&sort=' + urllib.quote(sort_field) + '&desc=' + ('true' if sort_descending else 'false')
+
+        description_arg = ''
+        if description:
+            description_arg = '&description=' + urllib.quote(description)
+
+        url = self.base_url + "/modelsnapshots/{0}?skip={1}&take={2}{3}{4}{5}{6}".format(
+            job_id, skip, take, start_arg, end_arg, sort_arg, description_arg)
+
+        return self._get(url, "Model Snapshots")
+
+
+    def revertToSnapshot(self, job_id, time=None, snapshot_id=None, description=None, delete_intervening_results=False):
+        """
+        Revert to the most recent snapshot matching specified criteria.
+
+        :param job_id: the job id
+        :param time: revert to a snapshot with a timestamp no later than this time
+        :param snapshot_id: the snapshot ID of the snapshot to revert to
+        :param description: the description of the snapshot to revert to
+        :param delete_intervening_results: should the results be reset
+            back to the time of the snapshot? (Defaults to False)
+        :return: (http_status_code, reverted_snapshot) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        delete_intervening_results_arg = 'deleteInterveningResults=' + 'true' if delete_intervening_results else 'false'
+
+        time_arg = ''
+        if time:
+            time_arg = '&time=' + urllib.quote(time)
+
+        snapshot_id_arg = ''
+        if snapshot_id:
+            snapshot_id_arg = '&snapshotId=' + urllib.quote(snapshot_id)
+
+        description_arg = ''
+        if description:
+            description_arg = '&description=' + urllib.quote(description)
+
+        url = self.base_url + "/modelsnapshots/{0}/revert?{1}{2}{3}{4}".format(
+            job_id, delete_intervening_results_arg, time_arg, snapshot_id_arg, description_arg)
+
+        return self._post(url, "Revert to snapshot", headers={}, payload=None)
+
+
+    def updateModelSnapshotDescription(self, job_id, snapshot_id, description):
+        """
+        Updates the description of the model snapshot that matches the given snapshot id
+        :param job_id: the job id
+        :param snapshot_id: the snapshot id
+        :param description: the new description
+        :return: (http_status_code, updated_snapshot) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        headers = {'Content-Encoding': 'application/json'}
+        payload = {'description': description}
+        url = self.base_url + "/modelsnapshots/{0}/{1}/description".format(job_id, snapshot_id)
+        return self._put(url, 'Update model snapshot description', headers=headers, payload=json.dumps(payload))
+
+
+    def deleteModelSnapshot(self, job_id, snapshot_id):
+        """
+        Deletes the model snapshot that matches the given snapshot if
+        :param job_id: the job id
+        :param snapshot_id: the snapshot id
+        :return: a (http_status_code, response_data) tuple, if
+            http_status_code != 200 response_data is an error object.
+        """
+        url = self.base_url + "/modelsnapshots/{0}/{1}".format(job_id, snapshot_id)
+        return self._delete(url, 'Delete model snapshot')
 
 
     def _get(self, url, request_description, expects_json=True):
@@ -714,6 +799,7 @@ class EngineApiClient:
 
         return (response.status, job)
 
+
     def _post(self, url, request_description, headers={}, payload=None):
         """
           General POST request.
@@ -729,9 +815,45 @@ class EngineApiClient:
 
           Returns a (status code, JSON/dictonary object) tuple
         """
+        return self._request_with_payload(url, request_description, headers, payload, 'POST')
+
+
+    def _put(self, url, request_description, headers={}, payload=None):
+        """
+          General PUT request.
+          If the response code is either 200, 201 or 202 then the request is
+          considered a success
+
+          url is the target URL
+          headers is a dictionary object defining the request headers
+          if not required use {}
+          payload is the data to be sent
+          request_description is used in log messages which are of the form
+          request_description + ' response = ...'
+
+          Returns a (status code, JSON/dictonary object) tuple
+        """
+        return self._request_with_payload(url, request_description, headers, payload, 'PUT')
+
+
+    def _request_with_payload(self, url, request_description, headers={}, payload=None, method='POST'):
+        """
+          Executes a request that can have a payload with the given method (POST, PUT)
+          If the response code is either 200, 201 or 202 then the request is
+          considered a success
+
+          url is the target URL
+          headers is a dictionary object defining the request headers
+          if not required use {}
+          payload is the data to be sent
+          request_description is used in log messages which are of the form
+          request_description + ' response = ...'
+
+          Returns a (status code, JSON/dictonary object) tuple
+        """
 
         self.connection.connect()
-        self.connection.request("POST", url, payload, headers)
+        self.connection.request(method, url, payload, headers)
 
         response = self.connection.getresponse();
 
@@ -783,3 +905,27 @@ class EngineApiClient:
         self.connection.close()
 
         return (response.status, data)
+
+    def _delete(self, url, request_description):
+        """
+            General DELETE request.
+            Returns a (http_status_code, response_data) tuple, if
+            http_status_code != 200 response_data is an error object.
+        """
+        self.connection.connect()
+        self.connection.request("DELETE", url)
+
+        response = self.connection.getresponse()
+        if response.status != 200:
+            logging.error(request_description + " response = " + str(response.status)
+                + " " + response.reason)
+
+        data = response.read()
+        if data:
+            msg = json.loads(data)
+        else:
+            msg = dict()
+
+        self.connection.close()
+
+        return (response.status, msg)
