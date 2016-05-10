@@ -681,20 +681,49 @@ class EngineApiClient:
 
     def getZippedLogs(self, job_id):
         """
-        Download the zipped log files and
+        Download the zipped log files of a job and
         return a tuple of (http_status_code, zip_data) if http_status_code
         == 200 else the error is read into a json document and
         returns (http_status_code, error_doc)
         """
-        url = self.base_url + "/logs/" + job_id
-        (http_status_code, data) = self._get(url, "zipped logs", expects_json=False)
+        return self._get_logs(self.base_url + "/logs/" + job_id, 'zipped logs')
+
+    def getJobLog(self, job_id, log_file_name):
+        """
+        Download the zipped log files of a job and
+        return a tuple of (http_status_code, zip_data) if http_status_code
+        == 200 else the error is read into a json document and
+        returns (http_status_code, error_doc)
+        """
+        return self._get_logs(self.base_url + "/logs/{0}/{1}".format(job_id, log_file_name), 'Specific job log')
+
+    def getElasticsearchServerLogs(self):
+        """
+        Download the zipped log files of elasticsearch and
+        return a tuple of (http_status_code, zip_data) if http_status_code
+        == 200 else the error is read into a json document and
+        returns (http_status_code, error_doc)
+        """
+        return self._get_logs(self.base_url + "/logs/elasticsearch", 'Elasticsearch server logs')
+
+    def getEngineApiServerLogs(self):
+        """
+        Download the zipped log files of the Engine API server and
+        return a tuple of (http_status_code, zip_data) if http_status_code
+        == 200 else the error is read into a json document and
+        returns (http_status_code, error_doc)
+        """
+        return self._get_logs(self.base_url + "/logs/engine_api", 'Engine API server logs')
+
+    def _get_logs(self, url, request_description):
+        http_status_code, data = self._get(url, request_description, expects_json=False)
 
         # if not a 200 code the response is a JSON error message
         if http_status_code == 200:
-            return (http_status_code, data)
+            return http_status_code, data
         else:
             error = json.loads(data)
-            return (http_status_code, error)
+            return http_status_code, error
 
     def getModelSnapshots(self, job_id, skip=0, take=100,
                           start_date=None, end_date=None,
