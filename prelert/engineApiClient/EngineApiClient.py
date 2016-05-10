@@ -83,6 +83,41 @@ class EngineApiClient:
 
         return self._post(url, "Create job", headers, payload)
 
+    def updateJob(self, job_id, payload):
+        """
+        Updates a job with according to the given payload.
+
+        :param job_id: the job id
+        :param payload: The JSON payload. See Prelert Engine API docs for help.
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        headers = {'Content-Encoding': 'application/json'}
+        url = self.base_url + "/jobs/{0}/update".format(job_id)
+        return self._put(url, 'Update job', headers=headers, payload=payload)
+
+    def pauseJob(self, job_id):
+        """
+        Pauses a job.
+
+        :param job_id: the job id
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        url = self.base_url + "/jobs/{0}/pause".format(job_id)
+        return self._post(url, 'Pause job', headers={}, payload=None)
+
+    def resumeJob(self, job_id):
+        """
+        Resumes a job.
+
+        :param job_id: the job id
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        url = self.base_url + "/jobs/{0}/resume".format(job_id)
+        return self._post(url, 'Resume job', headers={}, payload=None)
+
     def upload(self, job_id, data, gzipped=False, store=False):
         """
         Upload data to the jobs data endpoint.
