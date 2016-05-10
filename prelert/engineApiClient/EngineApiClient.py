@@ -798,6 +798,37 @@ class EngineApiClient:
         url = self.base_url + "/modelsnapshots/{0}/{1}".format(job_id, snapshot_id)
         return self._delete(url, 'Delete model snapshot')
 
+    def startScheduler(self, job_id, start_date='', end_date=''):
+        """
+        Starts the scheduler of a job.
+
+        :param job_id: the id of a scheduled job
+        :param start_date: Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help. When set, the scheduler
+            starts from the specified time. If not set, the scheduler starts
+            from epoch 0 or from just after the timestamp of latest processed record.
+        :param end_date: Must either be an epoch time or ISO 8601 format
+            see the Prelert Engine API docs for help. If set, the scheduler will
+            analyse data up to the specified time and then it will stop. If not set,
+            the scheduler will keep analysing data periodically.
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        url = self.base_url + "/schedulers/{0}/start?start={1}&end={2}".format(
+            job_id, urllib.quote(start_date), urllib.quote(end_date))
+        return self._post(url, 'Start scheduler', headers={}, payload=None)
+
+    def stopScheduler(self, job_id):
+        """
+        Stops the scheduler of a job.
+        The call is blocking until the scheduler is stopped.
+
+        :param job_id: the id of a scheduled job
+        :return: (http_status_code, acknowledgement) tuple if it was successful,
+            or (http_status_code, error_doc) if http_status_code != 200
+        """
+        url = self.base_url + "/schedulers/{0}/stop".format(job_id)
+        return self._post(url, 'Stop scheduler', headers={}, payload=None)
 
     def _get(self, url, request_description, expects_json=True):
         """
